@@ -65,7 +65,7 @@ def run(test, params, env):
                         )
                         if not reseted:
                             raise error.TestFail(
-                                "Not found RESET event after " "execute 'system_reset'"
+                                "Not found RESET event after execute 'system_reset'"
                             )
                         vm.monitor.clear_event("RESET")
 

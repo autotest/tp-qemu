@@ -44,7 +44,7 @@ def run(test, params, env):
         test.log.info("Verify snapshot's backing file information.")
         res = json.loads(output)
         if res["backing-filename-format"] != b_fmt or res["backing-filename"] != b_name:
-            test.fail("Backing file information is not correct," " got %s." % b_name)
+            test.fail("Backing file information is not correct, got %s." % b_name)
         compat = res["format-specific"]["data"]["compat"]
         expected = _get_compat_version()
         if compat != expected:
@@ -69,7 +69,7 @@ def run(test, params, env):
     )
 
     test.log.info(
-        "Boot a guest up from snapshot image: %s, and create a" " file %s on the disk.",
+        "Boot a guest up from snapshot image: %s, and create a file %s on the disk.",
         snapshot,
         file,
     )
@@ -110,7 +110,7 @@ def run(test, params, env):
     base_qit.start_vm()
     if not base_qit.check_file(file, md5):
         test.fail(
-            "The file %s's md5 on base image and" " snapshot file are different." % file
+            "The file %s's md5 on base image and snapshot file are different." % file
         )
     base_qit.destroy_vm()
 

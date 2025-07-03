@@ -120,7 +120,7 @@ def run(test, params, env):
         except aexpect.ExpectError:
             # kill server
             session_ctl[dst].cmd_output_safe("killall -9 nc")
-            test.fail("Fail to receive file" " from vm%s to vm%s" % (src + 1, dst + 1))
+            test.fail("Fail to receive file from vm%s to vm%s" % (src + 1, dst + 1))
         # check MD5 message digest of receive file in dst
         output = sessions[dst].cmd_output("md5sum receive").strip()
         digest_receive = re.findall(r"(\w+)", output)[0]

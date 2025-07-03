@@ -57,13 +57,13 @@ def run(test, params, env):
         virtio_fs_utils.run_viofs_service(test, params, session)
     else:
         error_context.context(
-            "Create a destination directory %s " "inside guest." % fs_dest,
+            "Create a destination directory %s inside guest." % fs_dest,
             test.log.info,
         )
         if not utils_misc.make_dirs(fs_dest, session=session):
             test.fail("Creating directory was failed!")
         error_context.context(
-            "Mount virtiofs target %s to %s inside" " guest." % (fs_target, fs_dest),
+            "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
             test.log.info,
         )
         if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):

@@ -47,7 +47,7 @@ def run(test, params, env):
         if params["os_type"] != "windows":
             return
         error_context.context(
-            "Install and check balloon service in windows " "guest", test.log.info
+            "Install and check balloon service in windows guest", test.log.info
         )
         session = vm.wait_for_login()
         driver_name = params.get("driver_name", "balloon")
@@ -149,7 +149,7 @@ def run(test, params, env):
     if params.get("os_type") == "windows":
         out = vm.devices.simple_hotplug(new_dev, vm.monitor)
         if out[1] is False:
-            test.fail("Failed to hotplug balloon at last, " "output is %s" % out[0])
+            test.fail("Failed to hotplug balloon at last, output is %s" % out[0])
         win_driver_utils.memory_leak_check(vm, test, params)
     error_context.context("Verify guest alive!", test.log.info)
     vm.verify_kernel_crash()

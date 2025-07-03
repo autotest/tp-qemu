@@ -17,10 +17,8 @@ class SyntaxCheckError(Exception):
         self.output = output
 
     def __str__(self):
-        return (
-            'The ansible-playbook command "{}" cannot pass syntax check: ' "{}".format(
-                self.cmd, self.output
-            )
+        return 'The ansible-playbook command "{}" cannot pass syntax check: {}'.format(
+            self.cmd, self.output
         )
 
 
@@ -112,12 +110,11 @@ class PlaybookExecutor(Expect):
             lambda: not self.is_alive(),
             timeout,
             step=step_time,
-            text="Waiting for the ansible-playbook process to " "complete...",
+            text="Waiting for the ansible-playbook process to complete...",
         ):
             self.kill()
             raise ExecutorTimeoutError(
-                "ansible-playbook cannot complete all "
-                "tasks within the expected time."
+                "ansible-playbook cannot complete all tasks within the expected time."
             )
         LOG_JOB.info("ansible-playbook execution is completed.")
 

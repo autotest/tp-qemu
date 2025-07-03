@@ -92,7 +92,7 @@ def run(test, params, env):
                 s, o = session.cmd_status_output(self.mig_bg_command)
                 if s != 0:
                     raise error.TestError(
-                        "Failed to run bg cmd in guest," " Output is '%s'." % o
+                        "Failed to run bg cmd in guest, Output is '%s'." % o
                     )
                 time.sleep(5)
 
@@ -110,7 +110,7 @@ def run(test, params, env):
                     s, o = session.cmd_status_output(self.mig_bg_check_command)
                     if s:
                         raise error.TestFail(
-                            "Background command not found," " Output is '%s'." % o
+                            "Background command not found, Output is '%s'." % o
                         )
 
                     logging.info("Kill the background command in the guest.")

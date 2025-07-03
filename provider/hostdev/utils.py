@@ -186,7 +186,7 @@ def ssh_login_from_mac(vm, mac, ip_version=4):
         port = vm.params.get("shell_port")
         linesep = vm.params.get("shell_linesep", "\n").encode().decode("unicode_escape")
         log_filename = (
-            f'session-{vm.name}-{time.strftime("%m-%d-%H-%M-%S")}-'
+            f"session-{vm.name}-{time.strftime('%m-%d-%H-%M-%S')}-"
             f"{utils_misc.generate_random_string(4)}.log"
         )
         log_filename = utils_misc.get_log_filename(log_filename)

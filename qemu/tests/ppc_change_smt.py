@@ -47,7 +47,7 @@ def run(test, params, env):
     threads = vm.cpuinfo.threads
 
     error_context.context(
-        "Check if the number of threads on guest is equal to" " SMP threads",
+        "Check if the number of threads on guest is equal to SMP threads",
         test.log.info,
     )
     _check_smt_state(threads)

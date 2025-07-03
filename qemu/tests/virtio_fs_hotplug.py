@@ -67,7 +67,7 @@ def run(test, params, env):
         Only for windows guest, enable driver verifier and install winscp.
         """
         error_context.context(
-            "Do driver verify and winfsp installation" " in windows guest.",
+            "Do driver verify and winfsp installation in windows guest.",
             test.log.info,
         )
         check_installed_cmd = params["check_installed_cmd"] % install_path
@@ -94,12 +94,12 @@ def run(test, params, env):
         Mount virtiofs on linux guest.
         """
         error_context.context(
-            "Create a destination directory %s " "inside guest." % fs_dest,
+            "Create a destination directory %s inside guest." % fs_dest,
             test.log.info,
         )
         utils_misc.make_dirs(fs_dest, session)
         error_context.context(
-            "Mount virtiofs target %s to %s inside" " guest." % (fs_target, fs_dest),
+            "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
             test.log.info,
         )
         if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):
@@ -182,7 +182,7 @@ def run(test, params, env):
         error_context.context("Run io test on the %s." % fs_dest, test.log.info)
         guest_file = os.path.join(fs_dest, test_file)
         error_context.context(
-            "Creating file under %s inside " "guest." % fs_dest, test.log.info
+            "Creating file under %s inside guest." % fs_dest, test.log.info
         )
         session.cmd(cmd_dd % guest_file, io_timeout)
         if os_type == "linux":

@@ -135,7 +135,7 @@ def run(test, params, env):
         output = session.cmd_output(viofs_sc_query_cmd)  # pylint: disable=E0606
         if expect_status not in output:
             test.fail(
-                "Could not %s VirtioFsSvc service, " "detail: '%s'" % (action, output)
+                "Could not %s VirtioFsSvc service, detail: '%s'" % (action, output)
             )
 
     def start_multifs_instance():
@@ -326,7 +326,7 @@ def run(test, params, env):
             try:
                 utils_selinux.set_status(se_mode)
             except Exception as err_msg:
-                test.cancel("Setting selinux failed on host with" " %s." % str(err_msg))
+                test.cancel("Setting selinux failed on host with %s." % str(err_msg))
     try:
         vm = None
         if (
@@ -351,7 +351,7 @@ def run(test, params, env):
         if security_label_test and os_type == "linux":
             # make sure selinux is enabled on guest.
             error_context.context(
-                "Set selinux to %s status on" " guest." % se_mode, test.log.info
+                "Set selinux to %s status on guest." % se_mode, test.log.info
             )
             se_mode_guest_before = session.cmd_output("getenforce").strip()
             if se_mode_guest_before != se_mode:
@@ -391,7 +391,7 @@ def run(test, params, env):
 
             if os_type == "linux":
                 error_context.context(
-                    "Create a destination directory %s " "inside guest." % fs_dest,
+                    "Create a destination directory %s inside guest." % fs_dest,
                     test.log.info,
                 )
                 utils_misc.make_dirs(fs_dest, session)
@@ -418,7 +418,7 @@ def run(test, params, env):
                     virtio_fs_utils.start_viofs_service(test, params, session)
                 else:
                     error_context.context(
-                        "Start winfsp.launcher" " instance in guest.", test.log.info
+                        "Start winfsp.launcher instance in guest.", test.log.info
                     )
                     start_multifs_instance()
 
@@ -444,7 +444,7 @@ def run(test, params, env):
             try:
                 if cmd_dd:
                     error_context.context(
-                        "Creating file under %s inside " "guest." % fs_dest,
+                        "Creating file under %s inside guest." % fs_dest,
                         test.log.info,
                     )
                     # for windows, after virtiofs service start up, should wait
@@ -498,7 +498,7 @@ def run(test, params, env):
 
                 if folder_test == "yes":
                     error_context.context(
-                        "Folder test under %s inside " "guest." % fs_dest, test.log.info
+                        "Folder test under %s inside guest." % fs_dest, test.log.info
                     )
                     session.cmd(cmd_new_folder % fs_dest)
                     try:
@@ -519,9 +519,7 @@ def run(test, params, env):
                     def file_check(cmd):
                         s, o = session.cmd_status_output(cmd, io_timeout)
                         if s:
-                            test.fail(
-                                "Case insensitive failed," " the output is %s" % o
-                            )
+                            test.fail("Case insensitive failed, the output is %s" % o)
 
                     error_context.context(
                         "Check if case insensitive is set in registry.", test.log.info
@@ -549,7 +547,7 @@ def run(test, params, env):
                     session.cmd("echo hello > %s" % guest_file, io_timeout)
 
                     error_context.context(
-                        "check the file with" " uppercase letter name.", test.log.info
+                        "check the file with uppercase letter name.", test.log.info
                     )
                     guest_file_full_path = (
                         volume_letter + ":\\" + test_file_guest.upper()
@@ -568,7 +566,7 @@ def run(test, params, env):
                     process.system("touch %s" % host_data, io_timeout)
                     time.sleep(2)
                     error_context.context(
-                        "check the file with" " lowercase letter name.", test.log.info
+                        "check the file with lowercase letter name.", test.log.info
                     )
                     guest_file_full_path = (
                         volume_letter + ":\\" + test_file_host.lower()
@@ -580,7 +578,7 @@ def run(test, params, env):
 
                 if cmd_symblic_file:
                     error_context.context(
-                        "Symbolic test under %s inside " "guest." % fs_dest,
+                        "Symbolic test under %s inside guest." % fs_dest,
                         test.log.info,
                     )
                     cmd_create_file = params["cmd_create_file"]
@@ -593,7 +591,7 @@ def run(test, params, env):
                         test.fail("Creat symbolic folders failed.")
 
                     error_context.context(
-                        "Compare symbolic link info in " "the host and guest",
+                        "Compare symbolic link info in the host and guest",
                         test.log.info,
                     )
 
@@ -749,7 +747,7 @@ def run(test, params, env):
 
                 if cmd_get_stdev:
                     error_context.context(
-                        "Create files in local device and" " nfs device ", test.log.info
+                        "Create files in local device and nfs device ", test.log.info
                     )
                     file_in_local_host = os.path.join(fs_source, "file_test")
                     file_in_nfs_host = os.path.join(
@@ -761,7 +759,7 @@ def run(test, params, env):
                     )
                     process.run(cmd_touch_file)
                     error_context.context(
-                        "Check if the two files' st_dev are" " the same on guest.",
+                        "Check if the two files' st_dev are the same on guest.",
                         test.log.info,
                     )
                     file_in_local_guest = os.path.join(fs_dest, "file_test")
@@ -808,7 +806,7 @@ def run(test, params, env):
 
                 if create_dir_winapi_cmd:
                     error_context.context(
-                        "Create new directory with WinAPI's " "CreateDirectory.",
+                        "Create new directory with WinAPI's CreateDirectory.",
                         test.log.info,
                     )
                     session.cmd(create_dir_winapi_cmd % fs_dest)
@@ -906,12 +904,12 @@ def run(test, params, env):
                     time.sleep(1)
 
                     error_context.context(
-                        "Check new file's security label" " on guest.", test.log.info
+                        "Check new file's security label on guest.", test.log.info
                     )
                     check_security_label(file_new_in_guest, fs_dest, selinux_xattr_name)
 
                     error_context.context(
-                        "Check new file's attribute on" " host.", test.log.info
+                        "Check new file's attribute on host.", test.log.info
                     )
                     check_attribute(
                         file_share_in_host,
@@ -949,7 +947,7 @@ def run(test, params, env):
                 if winfsp_test_cmd:
                     # only for windows guest.
                     error_context.context(
-                        "Run winfsp-tests suit on windows" " guest.", test.log.info
+                        "Run winfsp-tests suit on windows guest.", test.log.info
                     )
                     winfsp_copy_cmd = utils_misc.set_winutils_letter(
                         session, winfsp_copy_cmd
@@ -971,14 +969,13 @@ def run(test, params, env):
                     repeats = int(params.get("stop_start_repeats", 1))
                     for i in range(repeats):
                         error_context.context(
-                            "Repeat stop/start VirtioFsSvc:"
-                            " %d/%d" % (i + 1, repeats),
+                            "Repeat stop/start VirtioFsSvc: %d/%d" % (i + 1, repeats),
                             test.log.info,
                         )
                         viofs_svc_stop_start("stop", viofs_sc_stop_cmd, "STOPPED")
                         viofs_svc_stop_start("start", viofs_sc_start_cmd, "RUNNING")
                     error_context.context(
-                        "Basic IO test after" " repeat stop/start virtiofs" " service.",
+                        "Basic IO test after repeat stop/start virtiofs service.",
                         test.log.info,
                     )
                     s, o = session.cmd_status_output(cmd_dd % guest_file, io_timeout)
@@ -987,7 +984,7 @@ def run(test, params, env):
 
                 if cmd_run_sesuit:
                     error_context.context(
-                        "Run selinux_testsuits based on selinux label" "is enabled.",
+                        "Run selinux_testsuits based on selinux labelis enabled.",
                         test.log.info,
                     )
                     host_path = os.path.join(
@@ -1113,12 +1110,10 @@ def run(test, params, env):
                 try:
                     utils_selinux.set_status(se_mode_host_before)
                 except Exception as err_msg:
-                    test.fail(
-                        "Restore selinux failed with %s on" "host." % str(err_msg)
-                    )
+                    test.fail("Restore selinux failed with %s onhost." % str(err_msg))
             if os_type == "linux" and not se_mode_guest_before == se_mode:
                 test.log.info(
-                    "Need to change selinux mode back to" " %s.", se_mode_guest_before
+                    "Need to change selinux mode back to %s.", se_mode_guest_before
                 )
                 if se_mode_guest_before.lower() == "disabled":
                     cmd = (

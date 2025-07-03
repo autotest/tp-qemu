@@ -100,7 +100,7 @@ def get_version(
             result_file.write("### guest-kernel-ver :%s" % result)
     else:
         result_file.write(
-            "### guest-kernel-ver : Microsoft Windows " "[Version ide driver format]\n"
+            "### guest-kernel-ver : Microsoft Windows [Version ide driver format]\n"
         )
 
     if vfsd_ver_chk_cmd:
@@ -234,12 +234,12 @@ def run(test, params, env):
         fs_dest = fs_params.get("fs_dest")
         fs_params.get("fs_source_dir")
         error_context.context(
-            "Create a destination directory %s " "inside guest." % fs_dest,
+            "Create a destination directory %s inside guest." % fs_dest,
             test.log.info,
         )
         utils_misc.make_dirs(fs_dest, session)
         error_context.context(
-            "Mount virtiofs target %s to %s inside" " guest." % (fs_target, fs_dest),
+            "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
             test.log.info,
         )
         if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):

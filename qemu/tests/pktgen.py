@@ -108,7 +108,7 @@ def run(test, params, env):
         env["pktgen_run"] = False
 
     error_context.context(
-        "Verify Host and guest kernel no error " "and call trace", test.log.info
+        "Verify Host and guest kernel no error and call trace", test.log.info
     )
     vm.verify_kernel_crash()
     utils_misc.verify_dmesg()
@@ -122,8 +122,7 @@ def run(test, params, env):
     if loss_ratio > int(params.get("packet_lost_ratio", 5)) or loss_ratio == -1:
         test.log.debug("Ping %s output: %s", external_host, output)
         test.fail(
-            "Guest network connction unusable, "
-            "packet lost ratio is '%d%%'" % loss_ratio
+            "Guest network connction unusable, packet lost ratio is '%d%%'" % loss_ratio
         )
     if server_session:
         server_session.close()

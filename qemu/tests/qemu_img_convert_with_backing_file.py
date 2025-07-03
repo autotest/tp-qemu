@@ -58,7 +58,7 @@ def run(test, params, env):
     def check_image_size(image):
         """Check image is not fully allocated"""
         test.log.info(
-            "Verify qemu-img does not allocate the " "entire image after image convert"
+            "Verify qemu-img does not allocate the entire image after image convert"
         )
         info = json.loads(image.info(output="json"))
         virtual_size = info["virtual-size"]

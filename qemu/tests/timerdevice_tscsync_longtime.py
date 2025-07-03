@@ -67,6 +67,5 @@ def run(test, params, env):
     if tsc_cnt or tod_cnt or clk_cnt:
         msg = output.splitlines()[-5:]
         test.fail(
-            "Get error when running time-warp-test."
-            " Output (last 5 lines): '%s'" % msg
+            "Get error when running time-warp-test. Output (last 5 lines): '%s'" % msg
         )

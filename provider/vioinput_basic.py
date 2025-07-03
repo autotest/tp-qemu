@@ -58,9 +58,9 @@ def key_tap_test(test, params, vm):
             key_down_lst.append(k)
 
         if len(key_down_lst) != key_num or set(key_down_lst) != set(key_lst):
-            test.fail(
-                "Key down event keycode error, received:{0}," "expect:{1}"
-            ).format(key_down_lst, key_lst)
+            test.fail("Key down event keycode error, received:{0},expect:{1}").format(
+                key_down_lst, key_lst
+            )
 
         key_up_lst = list()
         for k, v in key_event_lst[-key_num:]:
@@ -69,7 +69,7 @@ def key_tap_test(test, params, vm):
             key_up_lst.append(k)
 
         if set(key_up_lst) != set(key_lst):
-            test.fail("Key up event keycode error, received:{0}," "expect:{1}").format(
+            test.fail("Key up event keycode error, received:{0},expect:{1}").format(
                 key_up_lst, key_lst
             )
 
@@ -85,7 +85,7 @@ def key_tap_test(test, params, vm):
         error_context.context("Send %s key tap to guest" % key, test.log.info)
         console.key_tap(key)
         error_context.context(
-            "Check %s key tap event received" "correct in guest" % key, test.log.info
+            "Check %s key tap event receivedcorrect in guest" % key, test.log.info
         )
         time.sleep(wait_time)
         key_check(key)

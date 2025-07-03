@@ -104,9 +104,9 @@ def run(test, params, env):
         error_context.context("Check option with command %s" % cmd, test.log.info)
         _, output = session.cmd_status_output(cmd)
         if not re.findall(r"%s" % pattern, output):
-            failed_log += (
-                "Can not find option %s from guest."
-                " Guest output is '%s'" % (params_name, output)
+            failed_log += "Can not find option %s from guest. Guest output is '%s'" % (
+                params_name,
+                output,
             )
 
         if sg_vpd_cmd:

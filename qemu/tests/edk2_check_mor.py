@@ -48,14 +48,14 @@ def run(test, params, env):
     check_cmd = params["check_secure_boot_enabled_cmd"]
     status, output = session.cmd_status_output(check_cmd)
     if status:
-        test.cancel("Secure boot is not enabled," "MOR must run under secure mode")
+        test.cancel("Secure boot is not enabled,MOR must run under secure mode")
     error_context.context("Check whether the guest has been signed.", test.log.info)
     vmlinuz = "/boot/vmlinuz-%s" % session.cmd_output("uname -r")
     check_sign_cmd %= vmlinuz
     sign_info = session.cmd_output(check_sign_cmd)
     signed = _check_signed()
     if not signed:
-        test.fail("The guest is not signed, " "but boot succeed under secure mode.")
+        test.fail("The guest is not signed, but boot succeed under secure mode.")
     session.close()
     vars_dev = vm.devices.get_by_params({"node-name": "file_ovmf_vars"})[0]
     ovmf_vars_file = vars_dev.params["filename"]

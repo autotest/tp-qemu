@@ -40,9 +40,9 @@ def run(test, params, env):
         "Assert CPU model and MMU mode of host and guest.", test.log.info
     )
     assert guest_cpu_model == host_cpu_model, (
-        "The CPU model of the host " "and guest do not match"
+        "The CPU model of the host and guest do not match"
     )
     assert guest_mmu_mode == host_mmu_mode, (
-        "The MMU mode of the host and " "guest do not match"
+        "The MMU mode of the host and guest do not match"
     )
     test.log.info("CPU model and MMU mode of host and guest are matched.")

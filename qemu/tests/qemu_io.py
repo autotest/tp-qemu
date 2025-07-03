@@ -94,7 +94,7 @@ class QemuIOConfig(object):
                     process.run("losetup -d %s" % l)
                 except process.CmdError as e:
                     LOG_JOB.error(
-                        "Failed to liberate loopback %s, " "error msg: '%s'", l, e
+                        "Failed to liberate loopback %s, error msg: '%s'", l, e
                     )
 
         for f in self.raw_files:

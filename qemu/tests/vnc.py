@@ -145,7 +145,7 @@ def run(test, params, env):
         vm.monitor.send_args_cmd(change_passwd_cmd % (password, timeout))
 
         error_context.context(
-            "Connect to VNC server after setting password" " to '%s'" % password
+            "Connect to VNC server after setting password to '%s'" % password
         )
         vnc = VNC(port=port, rfb_version=rfb_version)
         status = vnc.hand_shake(password)

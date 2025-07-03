@@ -138,7 +138,7 @@ def run(test, params, env):
         def ping_pong_migrate(self, sync, worker):
             for _ in range(self.migrate_count):
                 logging.info(
-                    "File transfer not ended, starting" " a round of migration..."
+                    "File transfer not ended, starting a round of migration..."
                 )
                 sync.sync(True, timeout=self.migration_timeout)
                 self.migrate_wait([self.vm], self.srchost, self.dsthost)
@@ -169,7 +169,7 @@ def run(test, params, env):
                     test, vm, self.install_path, extra_flags="-msse3 -msse2"
                 )
 
-                cmd = "nohup %s/cpuflags-test --stressmem %d,32" " > %s &" % (
+                cmd = "nohup %s/cpuflags-test --stressmem %d,32 > %s &" % (
                     os.path.join(self.install_path, "cpu_flags"),
                     self.stress_memory,
                     self.cpuflags_test_out,

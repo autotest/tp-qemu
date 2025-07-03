@@ -43,7 +43,7 @@ def run(test, params, env):
     server_file_transfer_port = int(params.get("server_file_transfer_port"))
     server_studio_path = params.get(
         "server_studio_path",
-        "%programfiles%\\ " "Microsoft Driver Test Manager\\Studio",
+        "%programfiles%\\ Microsoft Driver Test Manager\\Studio",
     )
     dsso_test_binary = params.get("dsso_test_binary", "deps/whql_submission_15.exe")
     dsso_test_binary = utils_misc.get_path(test.virtdir, dsso_test_binary)

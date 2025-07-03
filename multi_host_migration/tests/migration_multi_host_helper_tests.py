@@ -119,5 +119,5 @@ def run(test, params, env):
         tests_group()
     else:
         raise error.TestFail(
-            "Test group '%s' is not defined in" " cpuflags test" % test_type
+            "Test group '%s' is not defined in cpuflags test" % test_type
         )

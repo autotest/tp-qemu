@@ -152,7 +152,7 @@ def run(test, params, env):
     vm.send_key("meta_l-d")
     time.sleep(30)
     error_context.context(
-        "Check if the driver is installed and " "verified", test.log.info
+        "Check if the driver is installed and verified", test.log.info
     )
     session = utils_test.qemu.windrv_check_running_verifier(
         session, vm, test, driver_verifier, timeout

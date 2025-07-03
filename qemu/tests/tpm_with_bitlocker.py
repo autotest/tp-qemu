@@ -29,7 +29,7 @@ def run(test, params, env):
         session = vm.reboot(session, timeout=480)
 
     error_context.context(
-        "Prepares hard drive for BitLocker Drive " "Encryption inside guest",
+        "Prepares hard drive for BitLocker Drive Encryption inside guest",
         test.log.info,
     )
     cmd_bdehdcfg = session.cmd_output(params.get("cmd_bdehdcfg"))
@@ -37,7 +37,7 @@ def run(test, params, env):
         test.fail("Found error message.")
 
     error_context.context(
-        "Encrypts the volume and turns BitLocker " "protection on inside guest",
+        "Encrypts the volume and turns BitLocker protection on inside guest",
         test.log.info,
     )
     session.cmd(params.get("cmd_manage_bde_on"))

@@ -23,7 +23,7 @@ def run(test, params, env):
 
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
-        test.cancel("This test case requires a host QEMU with QMP " "monitor support")
+        test.cancel("This test case requires a host QEMU with QMP monitor support")
     if params.get("nettype", "macvtap") != "macvtap":
         test.cancel("This test case test macvtap.")
 
@@ -65,7 +65,7 @@ def run(test, params, env):
     interface_name = utils_net.get_linux_ifname(session, mac)
 
     error_context.context(
-        "In guest, change network interface " "to promisc state.", test.log.info
+        "In guest, change network interface to promisc state.", test.log.info
     )
     event_cmd = params.get("event_cmd") % interface_name
     send_cmd(event_cmd, event_cmd_type)

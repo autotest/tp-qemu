@@ -22,7 +22,7 @@ def run(test, params, env):
     if enforce_flag and "CPU_MODEL" in params["wrong_cmd"]:
         if enforce_flag in cpu.get_host_cpu_models():
             test.cancel(
-                "This case only test on the host without the flag" " %s." % enforce_flag
+                "This case only test on the host without the flag %s." % enforce_flag
             )
         cpu_model = cpu.get_qemu_best_cpu_model(params)
         params["wrong_cmd"] = params["wrong_cmd"].replace("CPU_MODEL", cpu_model)
@@ -66,5 +66,5 @@ def run(test, params, env):
         test.fail("Does not get expected warning message.")
     else:
         test.log.info(
-            "Test passed as qemu does not boot up and" " prompts expected message."
+            "Test passed as qemu does not boot up and prompts expected message."
         )

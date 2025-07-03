@@ -27,7 +27,7 @@ def run(test, params, env):
         """
         guest_kernel_version = session.cmd("uname -r").strip()
         if host_kernel_version != guest_kernel_version:
-            test.cancel("Please update your host and guest kernel " "to same version")
+            test.cancel("Please update your host and guest kernel to same version")
 
     def check_list(qmp_o, key, val=None, check_item_in_pair=True):
         """

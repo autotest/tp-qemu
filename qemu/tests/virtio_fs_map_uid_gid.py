@@ -60,7 +60,7 @@ def run(test, params, env):
         )
         guest_file = os.path.join(fs_dest, file_name)
         error_context.context(
-            "Create a file in shared dir " "with %s user." % user_guest, test.log.info
+            "Create a file in shared dir with %s user." % user_guest, test.log.info
         )
         if user_guest != "root":
             if session.cmd_status("id %s" % user_guest) == 0:
@@ -247,7 +247,7 @@ def run(test, params, env):
         if not utils_misc.make_dirs(fs_dest, session):
             test.fail("Creating directory was failed!")
         error_context.context(
-            "Mount virtiofs target %s to %s inside" " guest." % (fs_target, fs_dest),
+            "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
             test.log.info,
         )
         if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):

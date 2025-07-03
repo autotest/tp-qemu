@@ -27,9 +27,7 @@ def run(test, params, env):
     os.chdir(unittest_dir)
     unittest_list = glob.glob("*.flat")
     if not unittest_list:
-        test.cancel(
-            "No unittest files available (did you run the " "build test first?)"
-        )
+        test.cancel("No unittest files available (did you run the build test first?)")
     test.log.debug("Flat file list: %s", unittest_list)
 
     unittest_cfg = os.path.join(unittest_dir, "unittests.cfg")
@@ -72,8 +70,7 @@ def run(test, params, env):
             nfail += 1
             tests_failed.append(t)
             test.log.error(
-                "Unittest config file %s has section %s but no "
-                "mandatory option file",
+                "Unittest config file %s has section %s but no mandatory option file",
                 unittest_cfg,
                 t,
             )
@@ -152,7 +149,7 @@ def run(test, params, env):
                 if testlog is not None:
                     shutil.copy(vm.get_testlog_filename(), testlog_path)
                     test.log.info(
-                        "Unit test log collected and available " "under %s",
+                        "Unit test log collected and available under %s",
                         testlog_path,
                     )
             except (NameError, IOError):

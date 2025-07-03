@@ -25,7 +25,7 @@ def run(test, params, env):
             output = vm.process.get_output()
             if warning_text not in output:
                 test.fail(
-                    "Qemu should output warning for lack flags" " while it does not."
+                    "Qemu should output warning for lack flags while it does not."
                 )
         except Exception as e:
             if boot_expected == "no":
@@ -37,7 +37,7 @@ def run(test, params, env):
         else:
             if boot_expected == "no":
                 test.fail(
-                    "The vm should not boot successfully" " when cpu enforce mode is on"
+                    "The vm should not boot successfully when cpu enforce mode is on"
                 )
         finally:
             if vm and vm.is_alive():

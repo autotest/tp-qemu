@@ -182,7 +182,7 @@ def run(test, params, env):
                 s, o = session.cmd_status_output(get_sar_output_cmd)  # pylint: disable=E0606
                 if s != 0:
                     raise error.TestFail(
-                        "Failed to get sar output in guest." "The detail is: %s" % o
+                        "Failed to get sar output in guest.The detail is: %s" % o
                     )
             session.close()
             self.analysis_sar_output(o)
@@ -360,11 +360,9 @@ def run(test, params, env):
                 logging.info("Migration completed with auto-converge on")
             except virt_vm.VMMigrateTimeoutError:
                 if set_auto_converge == "yes":
-                    raise error.TestFail("Migration failed with " "auto-converge on")
+                    raise error.TestFail("Migration failed with auto-converge on")
                 else:
-                    logging.info(
-                        "migration would never finish with " "auto-converge off"
-                    )
+                    logging.info("migration would never finish with auto-converge off")
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     try:
@@ -415,11 +413,9 @@ def run(test, params, env):
                 logging.info("Migration completed with auto-converge on")
             except virt_vm.VMMigrateTimeoutError:
                 if set_auto_converge == "yes":
-                    raise error.TestFail("Migration failed with " "auto-converge on")
+                    raise error.TestFail("Migration failed with auto-converge on")
                 else:
-                    logging.info(
-                        "migration would never finish with " "auto-converge off"
-                    )
+                    logging.info("migration would never finish with auto-converge off")
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     try:
@@ -469,12 +465,12 @@ def run(test, params, env):
             try:
                 vm.wait_for_migration(self.migration_timeout)
                 logging.info(
-                    "Migration completed with set auto-converge: " "%s",
+                    "Migration completed with set auto-converge: %s",
                     set_auto_converge,
                 )
             except virt_vm.VMMigrateTimeoutError:
                 raise error.TestFail(
-                    "Migration failed with set auto-converge" ": %s" % set_auto_converge
+                    "Migration failed with set auto-converge: %s" % set_auto_converge
                 )
             finally:
                 if self.session:
@@ -510,11 +506,11 @@ def run(test, params, env):
                         if vm.is_paused():
                             vm.resume()
                         if not utils_test.qemu.guest_active(vm):
-                            raise error.TestFail("Guest not active " "after migration")
+                            raise error.TestFail("Guest not active after migration")
                     if self.need_cleanup:
                         self.clean_up(self.kill_bg_stress_cmd, vm)
                     else:
-                        logging.info("No need to kill the background " "test in guest.")
+                        logging.info("No need to kill the background test in guest.")
                     vm.reboot()
                     vm.destroy()
 

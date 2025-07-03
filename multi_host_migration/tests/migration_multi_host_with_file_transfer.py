@@ -172,7 +172,7 @@ def run(test, params, env):
             try:
                 while bg.is_alive():
                     logging.info(
-                        "File transfer not ended, starting" " a round of migration..."
+                        "File transfer not ended, starting a round of migration..."
                     )
                     sync.sync(True, timeout=d_transfer_timeout)
                     self.migrate_wait([self.vm], self.srchost, self.dsthost)
@@ -199,7 +199,7 @@ def run(test, params, env):
                 if not done:
                     break
                 logging.info(
-                    "File transfer not ended, starting" " a round of migration..."
+                    "File transfer not ended, starting a round of migration..."
                 )
                 self.migrate_wait([self.vm], self.srchost, self.dsthost)
 
@@ -217,8 +217,7 @@ def run(test, params, env):
             if self.hostid == self.master_id():
                 try:
                     utils.run(
-                        "dd if=/dev/zero of=%s bs=1M"
-                        " count=%s" % (host_path, file_size)
+                        "dd if=/dev/zero of=%s bs=1M count=%s" % (host_path, file_size)
                     )
 
                     self.vm_addr = self._prepare_vm(self.vm).get_address()
@@ -256,9 +255,7 @@ def run(test, params, env):
                         check_sum = self.file_check_sums[i]
                         if check_sum != orig_hash:
                             wrong_check_sum = True
-                            logging.error(
-                                "Checksum in transfer number" " %d if wrong.", i
-                            )
+                            logging.error("Checksum in transfer number %d if wrong.", i)
 
                     if wrong_check_sum:
                         raise error.TestFail(

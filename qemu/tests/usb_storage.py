@@ -56,7 +56,7 @@ def run(test, params, env):
             ignore_case = True
 
         error_context.context(
-            "Finding matched sub-string with regex" " pattern '%s'" % regex_str,
+            "Finding matched sub-string with regex pattern '%s'" % regex_str,
             test.log.info,
         )
         m = re.findall(regex_str, string, search_opt)

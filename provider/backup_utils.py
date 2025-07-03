@@ -371,9 +371,9 @@ def blockdev_batch_backup(vm, source_lst, target_lst, bitmap_lst, **extra_option
 
     for idx, src in enumerate(source_lst):
         if sync_mode in ["incremental", "bitmap"]:
-            assert len(bitmap_lst) == len(
-                source_lst
-            ), "must provide a valid bitmap name for 'incremental' sync mode"
+            assert len(bitmap_lst) == len(source_lst), (
+                "must provide a valid bitmap name for 'incremental' sync mode"
+            )
             extra_options["bitmap"] = bitmap_lst[idx]
         backup_cmd, arguments = blockdev_backup_qmp_cmd(
             src, target_lst[idx], **extra_options

@@ -42,7 +42,7 @@ def run(test, params, env):
     output = snapshot_test.snapshot_list()
     if snapshot_tag not in output:
         raise exceptions.TestFail(
-            "Snapshot created failed or missed;" "snapshot list is: \n%s" % output
+            "Snapshot created failed or missed;snapshot list is: \n%s" % output
         )
 
     test.log.info("Step3. change tmp file before apply snapshot")

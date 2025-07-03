@@ -162,5 +162,5 @@ def run(test, params, env):
             vdpa_net_test.remove_dev(params.get("netdst_nic2"))
             vdpa_net_test.cleanup()
         error_context.context(
-            "Verify Host and guest kernel no error" "and call trace", test.log.info
+            "Verify Host and guest kernel no errorand call trace", test.log.info
         )

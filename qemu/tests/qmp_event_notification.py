@@ -21,7 +21,7 @@ def run(test, params, env):
 
     qemu_binary = utils_misc.get_qemu_binary(params)
     if not utils_misc.qemu_has_option("qmp", qemu_binary):
-        test.cancel("This test case requires a host QEMU with QMP " "monitor support")
+        test.cancel("This test case requires a host QEMU with QMP monitor support")
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
 

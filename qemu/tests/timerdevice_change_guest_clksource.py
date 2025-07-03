@@ -44,7 +44,7 @@ def run(test, params, env):
     try:
         available_clksrc_list = session.cmd(avl_clk).split()
     except Exception as detail:
-        test.fail("Couldn't get guest available clock source." " Detail: '%s'" % detail)
+        test.fail("Couldn't get guest available clock source. Detail: '%s'" % detail)
     try:
         for avl_clksrc in available_clksrc_list:
             if avl_clksrc == "kvm-clock":

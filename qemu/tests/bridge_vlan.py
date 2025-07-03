@@ -92,8 +92,7 @@ def run(test, params, env):
         """
         mac_cmd = "ip link set %s add %s up" % (vlan_if, mac_str)
         error_context.context(
-            "Give a new mac address '%s' for vlan interface "
-            "'%s'" % (mac_str, vlan_if),
+            "Give a new mac address '%s' for vlan interface '%s'" % (mac_str, vlan_if),
             test.log.info,
         )
         session.cmd_output_safe(mac_cmd)
@@ -213,12 +212,10 @@ def run(test, params, env):
             ping_vlan(vm, dest=host_vlan_ip, vlan_if=interface, session=session)
         except NetPingError:
             test.log.info(
-                "Guest ping fail to host as expected with " "interface '%s'", interface
+                "Guest ping fail to host as expected with interface '%s'", interface
             )
         else:
-            test.fail(
-                "Guest ping to host should fail with interface" " '%s'" % interface
-            )
+            test.fail("Guest ping to host should fail with interface '%s'" % interface)
         ifname.append(interface)
         vm_ip.append(inter_ip)
         sessions.append(session)

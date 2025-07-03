@@ -79,11 +79,11 @@ def run(test, params, env):
     def switch_ip_to_dynamic(session, eth_name):
         if eth_name:
             restore_ip_cmd = (
-                'netsh interface ip set address name="%s" ' "source=dhcp" % eth_name
+                'netsh interface ip set address name="%s" source=dhcp' % eth_name
             )
             session.cmd(restore_ip_cmd)
             restore_dns_cmd = (
-                'netsh interface ip set dnsservers name="%s" ' "source=dhcp" % eth_name
+                'netsh interface ip set dnsservers name="%s" source=dhcp' % eth_name
             )
             session.cmd(restore_dns_cmd)
 
@@ -120,14 +120,13 @@ def run(test, params, env):
             vm.reboot(session)
         else:
             error_context.context(
-                "Create a destination directory %s " "inside guest." % fs_dest,
+                "Create a destination directory %s inside guest." % fs_dest,
                 test.log.info,
             )
             if not utils_misc.make_dirs(fs_dest, session=session):
                 test.fail("Creating directory was failed!")
             error_context.context(
-                "Mount virtiofs target %s to %s inside"
-                " guest." % (fs_target, fs_dest),
+                "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
                 test.log.info,
             )
             if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):
@@ -155,8 +154,7 @@ def run(test, params, env):
                         test.fail("Failed to join the domain!")
                     elif "is not recognized as an internal" in output:
                         error_context.context(
-                            "The netdom is NOT supported, "
-                            "trying to use powershell...",
+                            "The netdom is NOT supported, trying to use powershell...",
                             test.log.info,
                         )
                         ps_cred = params.get("ps_cred")
@@ -182,8 +180,7 @@ def run(test, params, env):
                     output = session.cmd_output(remove_domain_cmd)
                     if "is not recognized as an internal" in output:
                         error_context.context(
-                            "The netdom is NOT supported, "
-                            "trying to use powershell...",
+                            "The netdom is NOT supported, trying to use powershell...",
                             test.log.info,
                         )
                         ps_cred = params.get("ps_cred")

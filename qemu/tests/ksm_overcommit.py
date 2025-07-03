@@ -71,7 +71,7 @@ def run(test, params, env):
         """
         test.log.debug("Starting ksm_overcommit_guest.py on guest %s", vm.name)
         session.sendline(
-            "$(command -v python python3 | head -1) " "/tmp/ksm_overcommit_guest.py"
+            "$(command -v python python3 | head -1) /tmp/ksm_overcommit_guest.py"
         )
         try:
             session.read_until_last_line_matches(["PASS:", "FAIL:"], timeout)
@@ -95,7 +95,7 @@ def run(test, params, env):
         :return: Tuple (match index, data)
         """
         test.log.debug(
-            "Executing '%s' on ksm_overcommit_guest.py loop, " "vm: %s, timeout: %s",
+            "Executing '%s' on ksm_overcommit_guest.py loop, vm: %s, timeout: %s",
             command,
             vm.name,
             timeout,
@@ -174,7 +174,7 @@ def run(test, params, env):
                 else:
                     shm = vm.get_shared_meminfo()
                 test.log.debug(
-                    "Shared meminfo for guest %s after " "iteration %s: %s",
+                    "Shared meminfo for guest %s after iteration %s: %s",
                     vm.name,
                     j,
                     shm,
@@ -217,7 +217,7 @@ def run(test, params, env):
         Sequential split of pages on guests up to memory limit
         """
         test.log.info(
-            "Phase 3a: Sequential split of pages on guests up to " "memory limit"
+            "Phase 3a: Sequential split of pages on guests up to memory limit"
         )
         last_vm = 0
         session = None
@@ -235,7 +235,7 @@ def run(test, params, env):
             session = lsessions[i]
             cmd = "mem.static_random_fill()"
             test.log.debug(
-                "Executing %s on ksm_overcommit_guest.py loop, " "vm: %s", cmd, vm.name
+                "Executing %s on ksm_overcommit_guest.py loop, vm: %s", cmd, vm.name
             )
             session.sendline(cmd)
 
@@ -533,9 +533,7 @@ def run(test, params, env):
         mem = host_mem
         # 32bit system adjustment
         if "64" not in params.get("vm_arch_name"):
-            test.log.debug(
-                "Probably i386 guest architecture, " "max allocator mem = 2G"
-            )
+            test.log.debug("Probably i386 guest architecture, max allocator mem = 2G")
             # Guest can have more than 2G but
             # kvm mem + 1MB (allocator itself) can't
             if host_mem > 3100:
@@ -558,9 +556,7 @@ def run(test, params, env):
 
         # 32bit system adjustment
         if params["vm_arch_name"] == "i686":
-            test.log.debug(
-                "Probably i386 guest architecture, " "max allocator mem = 2G"
-            )
+            test.log.debug("Probably i386 guest architecture, max allocator mem = 2G")
             # Guest can have more than 2G but
             # kvm mem + 1MB (allocator itself) can't
             if mem - guest_reserve - 1 > 3100:
@@ -658,7 +654,7 @@ def run(test, params, env):
         lvms[i].create()
         if not lvms[i].is_alive():
             test.error(
-                "VM %s seems to be dead; Test requires a" "living VM" % lvms[i].name
+                "VM %s seems to be dead; Test requires aliving VM" % lvms[i].name
             )
 
         lsessions.append(lvms[i].wait_for_login(timeout=360))

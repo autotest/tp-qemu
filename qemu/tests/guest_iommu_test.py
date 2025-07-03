@@ -91,8 +91,7 @@ def verify_eim_status(test, params, session):
             output = session.cmd_output('journalctl -k | grep -i "%s"' % key_words)
         if not output:
             test.fail(
-                'journalctl -k | grep -i "%s"'
-                "from the systemd journal log." % key_words
+                'journalctl -k | grep -i "%s"from the systemd journal log.' % key_words
             )
         test.log.debug(output)
 
@@ -105,8 +104,7 @@ def verify_x2apic_status(test, params, session):
             output = session.cmd_output('journalctl -k | grep -i "%s"' % key_words)
         if not output:
             test.fail(
-                'journalctl -k | grep -i "%s"'
-                "from the systemd journal log." % key_words
+                'journalctl -k | grep -i "%s"from the systemd journal log.' % key_words
             )
         test.log.debug(output)
 

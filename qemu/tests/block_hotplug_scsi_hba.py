@@ -36,7 +36,7 @@ def run(test, params, env):
     def _get_scsi_host_id(session):
         test.log.info("Get the scsi host id which is hot plugged.")
         output = session.cmd(
-            'dmesg | grep "scsi host" | ' "awk 'END{print}' | awk '{print $4}'"
+            "dmesg | grep \"scsi host\" | awk 'END{print}' | awk '{print $4}'"
         )
         return re.search(r"(\d+)", output).group(1)
 

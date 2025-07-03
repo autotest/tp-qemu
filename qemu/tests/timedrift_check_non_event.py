@@ -83,5 +83,5 @@ def run(test, params, env):
     session.close()
     if (hwclock_st1 - hwclock_st2 - float(time_forward)) > float(drift_threshold):
         test.fail(
-            "Unexpected hwclock drift, " "hwclock: current guest time=%ss" % hwclock_st2
+            "Unexpected hwclock drift, hwclock: current guest time=%ss" % hwclock_st2
         )

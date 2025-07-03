@@ -29,7 +29,7 @@ def run(test, params, env):
     except VMCreateError as e:
         if not re.search(error_msg, e.output):
             test.log.error(e.output)
-            test.error("The error message could not be searched at qemu " "outputs.")
+            test.error("The error message could not be searched at qemu outputs.")
         test.log.info("qemu terminated with the expected error message.")
     else:
         test.fail(

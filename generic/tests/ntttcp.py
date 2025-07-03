@@ -21,7 +21,7 @@ def _verify_vm_driver(vm, test, driver_name, timeout=360):
     """
 
     error_context.context(
-        "Check if driver is installed" " and verified for vm: %s" % vm.name,
+        "Check if driver is installed and verified for vm: %s" % vm.name,
         test.log.info,
     )
     session = vm.wait_for_login(timeout=timeout)

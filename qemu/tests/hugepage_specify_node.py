@@ -33,7 +33,7 @@ def run(test, params, env):
 
     for node_id in node_list:
         error_context.base_context(
-            "Check preprocess HugePages Free on host " "numa node %s." % node_id,
+            "Check preprocess HugePages Free on host numa node %s." % node_id,
             test.log.info,
         )
         node_memfree = int(node_meminfo[node_id]["MemFree"])
@@ -44,12 +44,12 @@ def run(test, params, env):
 
     if len(idle_node_list) < 2 or not node_list:
         test.cancel(
-            "Host node does not have enough nodes to run the test, " "skipping test..."
+            "Host node does not have enough nodes to run the test, skipping test..."
         )
 
     for node_id in node_list:
         error_context.base_context(
-            "Specify qemu process only allocate " "HugePages from node%s." % node_id,
+            "Specify qemu process only allocate HugePages from node%s." % node_id,
             test.log.info,
         )
         params["target_nodes"] = "%s" % node_id
@@ -82,7 +82,7 @@ def run(test, params, env):
                 meminfo = host_numa_node.get_all_node_meminfo()
                 for index in check_list:
                     error_context.base_context(
-                        "Check process HugePages Free on host " "numa node %s." % index,
+                        "Check process HugePages Free on host numa node %s." % index,
                         test.log.info,
                     )
                     hugepages_free = int(meminfo[index]["HugePages_Free"])

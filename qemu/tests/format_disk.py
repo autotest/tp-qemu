@@ -121,7 +121,7 @@ def run(test, params, env):
             test.fail("Write to file error: %s" % output)
 
         error_context.context(
-            "Read in the file to see whether " "content has changed", test.log.info
+            "Read in the file to see whether content has changed", test.log.info
         )
         md5chk_cmd = params.get("md5chk_cmd")
         if md5chk_cmd:
@@ -142,7 +142,7 @@ def run(test, params, env):
 
     umount_cmd = params.get("umount_cmd", "").format(drive_path)
     if umount_cmd:
-        error_context.context("Unmounting disk(s) after file " "write/read operation")
+        error_context.context("Unmounting disk(s) after file write/read operation")
         status, output = session.cmd_status_output(umount_cmd, timeout=cmd_timeout)
         if status != 0:
             show_mount_cmd = params.get("show_mount_cmd", "").format(drive_path)
@@ -162,7 +162,7 @@ def run(test, params, env):
     output = ""
     try:
         output = session.cmd("dmesg -c")
-        error_context.context("Checking if there are I/O error " "messages in dmesg")
+        error_context.context("Checking if there are I/O error messages in dmesg")
     except aexpect.ShellCmdError:
         pass
 

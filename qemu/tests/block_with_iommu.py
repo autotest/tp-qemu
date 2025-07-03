@@ -49,8 +49,7 @@ def run(test, params, env):
             output = session.cmd_output('journalctl -k | grep -i "%s"' % key_words)
             if not output:
                 test.fail(
-                    'No found the info "%s" '
-                    "from the systemd journal log." % key_words
+                    'No found the info "%s" from the systemd journal log.' % key_words
                 )
             test.log.debug(output)
 

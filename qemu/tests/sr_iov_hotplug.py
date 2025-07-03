@@ -129,9 +129,7 @@ def run(test, params, env):
                 cmd = "mv %s.BACKUP %s" % (iface_script, iface_script)
                 status, output = session.cmd_status_output(cmd)
                 if status:
-                    test.error(
-                        "Failed to cleanup network script in guest: " "%s" % output
-                    )
+                    test.error("Failed to cleanup network script in guest: %s" % output)
         else:
             global iface_scripts
             for iface_script in iface_scripts:
@@ -212,9 +210,7 @@ def run(test, params, env):
                 )
 
             if not utils_misc.wait_for(_find_pci, test_timeout, 3, 3):
-                test.fail(
-                    "New add device not found in guest. " "Command was: lspci -nn"
-                )
+                test.fail("New add device not found in guest. Command was: lspci -nn")
 
             # Assign static IP to the hotplugged interface
             if params.get("assign_static_ip", "no") == "yes":
@@ -251,9 +247,7 @@ def run(test, params, env):
                         )
                         status, output = session.cmd_status_output(cmd)
                         if status:
-                            test.error(
-                                "Failed to set static ip in guest: " "%s" % output
-                            )
+                            test.error("Failed to set static ip in guest: %s" % output)
             # Test the newly added device
             if not utils_misc.wait_for(_check_ip, 120, 3, 3):
                 ifconfig = session.cmd_output("ifconfig -a")
@@ -266,7 +260,7 @@ def run(test, params, env):
                 session.cmd(params["pci_test_cmd"] % (pci_num + 1))
             except aexpect.ShellError as e:
                 test.fail(
-                    "Check device failed after PCI " "hotplug. Output: %r" % e.output
+                    "Check device failed after PCI hotplug. Output: %r" % e.output
                 )
 
         except Exception:
@@ -352,7 +346,7 @@ def run(test, params, env):
 
     local_functions = locals()
 
-    if params.get("enable_set_link" "yes") == "yes":
+    if params.get("enable_set_linkyes") == "yes":
         error_context.context("Disable the primary link(s) of guest", test.log.info)
         for nic in vm.virtnet:
             vm.set_link(nic.device_id, up=False)

@@ -155,9 +155,7 @@ def build_install_virtviewer(test, vm_root_session, vm_script_path, params):
     # Get version of remote-viewer after install
     try:
         output = vm_root_session.cmd(
-            "which remote-viewer;"
-            "LD_LIBRARY_PATH=/usr/local/lib"
-            " remote-viewer --version"
+            "which remote-viewer;LD_LIBRARY_PATH=/usr/local/lib remote-viewer --version"
         )
         LOG_JOB.info(output)
     except ShellCmdError as err:
@@ -176,7 +174,7 @@ def build_install_spicegtk(test, vm_root_session, vm_script_path, params):
     # Get version of spice-gtk before install
     try:
         output = vm_root_session.cmd(
-            "LD_LIBRARY_PATH=/usr/local/lib" " remote-viewer --spice-gtk-version"
+            "LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version"
         )
         LOG_JOB.info(output)
     except:
@@ -226,7 +224,7 @@ def build_install_spicegtk(test, vm_root_session, vm_script_path, params):
     # Get version of spice-gtk after install
     try:
         output = vm_root_session.cmd(
-            "LD_LIBRARY_PATH=/usr/local/lib" " remote-viewer --spice-gtk-version"
+            "LD_LIBRARY_PATH=/usr/local/lib remote-viewer --spice-gtk-version"
         )
         LOG_JOB.info(output)
     except:

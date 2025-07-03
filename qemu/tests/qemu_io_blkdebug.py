@@ -113,7 +113,7 @@ def run(test, params, env):
         try:
             std_msg = os.strerror(int(errn))
         except ValueError:
-            test.error("Can not find error message:\n" "    error code is %s" % errn)
+            test.error("Can not find error message:\n    error code is %s" % errn)
 
         session.close()
         error_context.context("Compare the error message", test.log.info)

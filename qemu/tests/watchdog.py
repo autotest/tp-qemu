@@ -46,7 +46,7 @@ def run(test, params, env):
         # when wDT is 6300esb need check pci info
         if watchdog_device == "i6300esb":
             error_context.context(
-                "checking pci info to ensure have WDT" " device", test.log.info
+                "checking pci info to ensure have WDT device", test.log.info
             )
             session.cmd("echo 1 > /sys/bus/pci/rescan")
             o = session.cmd_output("lspci")
@@ -99,8 +99,7 @@ def run(test, params, env):
 
         response_timeout = int(params.get("response_timeout", "240"))
         error_context.context(
-            "Check whether or not watchdog action '%s' took"
-            " effect" % watchdog_action,
+            "Check whether or not watchdog action '%s' took effect" % watchdog_action,
             test.log.info,
         )
         if watchdog_action == "inject-nmi":
@@ -182,8 +181,7 @@ def run(test, params, env):
 
         # check the host support watchdog types.
         error_context.context(
-            "Checking whether or not the host support"
-            " WDT '%s'" % watchdog_device_type,
+            "Checking whether or not the host support WDT '%s'" % watchdog_device_type,
             test.log.info,
         )
         watchdog_device = process.system_output(
@@ -273,7 +271,7 @@ def run(test, params, env):
         _trigger_watchdog(session, trigger_cmd)
 
         error_context.context(
-            "Do migration(protocol:%s),Watchdog have" " been triggered." % mig_protocol,
+            "Do migration(protocol:%s),Watchdog have been triggered." % mig_protocol,
             test.log.info,
         )
         args = (mig_timeout, mig_protocol, mig_cancel_delay)
@@ -325,7 +323,7 @@ def run(test, params, env):
         vm.monitor.send_args_cmd(watchdog_device_del)
 
         error_context.context(
-            "Resume the guest, check the WDT have" " been removed", test.log.info
+            "Resume the guest, check the WDT have been removed", test.log.info
         )
         vm.resume()
         session = vm.wait_for_login(timeout=timeout)
@@ -355,8 +353,7 @@ def run(test, params, env):
                 "VM." % watchdog_action
             )
         test.log.info(
-            "Watchdog action '%s' didn't take effect after pausing "
-            "VM, it is expected.",
+            "Watchdog action '%s' didn't take effect after pausing VM, it is expected.",
             watchdog_action,
         )
         vm.resume()
@@ -418,7 +415,7 @@ def run(test, params, env):
         reload_module_cmd = params["reload_module_cmd"]
         _watchdog_device_check(test, session, watchdog_device_type)
         error_context.context(
-            "set heartbeat value and reload the i6300esb " "module", test.log.info
+            "set heartbeat value and reload the i6300esb module", test.log.info
         )
         session.cmd(del_module_cmd)
         heartbeat = params["heartbeat"]
@@ -433,7 +430,7 @@ def run(test, params, env):
             o = session.cmd_output("dmesg | grep -i 'i6300esb.*invalid'")
             if o:
                 test.log.info(
-                    "Heartbeat value %s is out of range, it is " "expected.", heartbeat
+                    "Heartbeat value %s is out of range, it is expected.", heartbeat
                 )
             else:
                 test.fail("No invalid heartbeat info in dmesg.")
@@ -441,7 +438,7 @@ def run(test, params, env):
             o = session.cmd_output("dmesg | grep -i 'heartbeat=30'")
             if not o:
                 test.fail(
-                    "Heartbeat value isn't default 30 sec in dmesg, it " "should be."
+                    "Heartbeat value isn't default 30 sec in dmesg, it should be."
                 )
             heartbeat = 30
         elif 1 <= heartbeat <= 2046:

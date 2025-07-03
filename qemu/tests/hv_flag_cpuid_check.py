@@ -44,7 +44,7 @@ def run(test, params, env):
 
         """
         error_context.context(
-            "Check the corresponding CPUID entries with " "the flag %s" % hv_flag,
+            "Check the corresponding CPUID entries with the flag %s" % hv_flag,
             test.log.info,
         )
         output = session.cmd_output(check_cpuid_entry_cmd)

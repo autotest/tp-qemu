@@ -78,13 +78,13 @@ def run(test, params, env):
         session = vm.wait_for_serial_login()
     except remote.LoginTimeoutError:
         if signed:
-            test.fail("The guest is signed," " but boot failed under secure mode.")
+            test.fail("The guest is signed, but boot failed under secure mode.")
     else:
         check_cmd = params["check_secure_boot_enabled_cmd"]
         status, output = session.cmd_status_output(check_cmd)
         if status != 0:
             test.fail("Secure boot is not enabled")
         if not signed:
-            test.fail("The guest is not signed," " but boot succeed under secure mode.")
+            test.fail("The guest is not signed, but boot succeed under secure mode.")
     finally:
         vm.destroy()

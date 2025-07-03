@@ -53,7 +53,7 @@ def run(test, params, env):
         if s:
             test.fail("Fail command: %s. Output: %s." % (enable_cmd, o))
         error_context.context(
-            "Restart virtiofs service after modify" " the registry.", test.log.info
+            "Restart virtiofs service after modify the registry.", test.log.info
         )
         virtio_fs_utils.stop_viofs_service(test, params, session)
         virtio_fs_utils.start_viofs_service(test, params, session)
@@ -110,7 +110,7 @@ def run(test, params, env):
                         " pls check on your host."
                     )
                 else:
-                    test.fail("Unknown error when deleting the " "user: %s" % o)
+                    test.fail("Unknown error when deleting the user: %s" % o)
         if (
             process.system(
                 "grep %s /etc/group" % user_name, shell=True, ignore_status=True
@@ -161,7 +161,7 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.context(
-        "Change the shared dir's owner and group" " to 'test' on host.", test.log.info
+        "Change the shared dir's owner and group to 'test' on host.", test.log.info
     )
     if params.get("privileged", "") == "yes":
         # get shared dir by qdevices.
@@ -203,7 +203,7 @@ def run(test, params, env):
     # set UID/GID to virtiofs service and check the created file on host.
     for test_value, expect_value in dict_ids.items():
         error_context.context(
-            "Set host UID:GID=%s to viofs" " service." % test_value, test.log.info
+            "Set host UID:GID=%s to viofs service." % test_value, test.log.info
         )
         s, o = session.cmd_status_output(params["viofs_owner_query_cmd"])
         if s == 0:

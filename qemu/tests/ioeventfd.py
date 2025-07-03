@@ -179,7 +179,7 @@ def run(test, params, env):
                 'should be less than the one with "on".'
             )
         test.log.info(
-            'The number of event fds with "off" ' 'is less than the one with "on".'
+            'The number of event fds with "off" is less than the one with "on".'
         )
 
     params["start_vm"] = "yes"

@@ -57,7 +57,7 @@ def run(test, params, env):
         error_context.context("check guest cpu number")
         smp = int(params.get("smp"))
         if smp < 2:
-            test.error("The guest only has %d vcpu," "unsupport cpu offline" % smp)
+            test.error("The guest only has %d vcpu,unsupport cpu offline" % smp)
 
         # Set cpu offline
         error_context.context("set cpu offline ")

@@ -29,7 +29,7 @@ def run(test, params, env):
                 if nic_idx < 0:
                     raise
                 test.log.warning(
-                    "Unable to login guest, " "try to login via nic %d", nic_idx
+                    "Unable to login guest, try to login via nic %d", nic_idx
                 )
 
     def check_cdrom(timeout):

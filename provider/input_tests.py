@@ -46,7 +46,7 @@ def key_tap_test(test, params, console, listener, wait_time):
         time.sleep(wait_time)
 
         LOG_JOB.info(
-            "Check guest received %s key event is " "matched with expected key event",
+            "Check guest received %s key event is matched with expected key event",
             key,
         )
         keycode = keys_dict[key]

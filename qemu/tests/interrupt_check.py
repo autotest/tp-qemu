@@ -35,8 +35,7 @@ def run(test, params, env):
         ]
         if not filtered_result:
             test.fail(
-                "Number of interrupts on the CPUs have not changed after"
-                " test execution"
+                "Number of interrupts on the CPUs have not changed after test execution"
             )
         elif any([int(x[1]) < int(x[0]) for x in filtered_result]):
             test.fail("The number of interrupts has decreased")

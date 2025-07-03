@@ -93,7 +93,7 @@ def run(test, params, env):
                 )
                 cmd_mmap = cmd_mmap % (tmp_directory, numa_node_malloc, mmap_size)
                 error_context.context(
-                    "Run mem_mapping on host node " "%s." % numa_node_malloc,
+                    "Run mem_mapping on host node %s." % numa_node_malloc,
                     test.log.info,
                 )
                 process.system(cmd_mmap, shell=True, ignore_bg_processes=True)

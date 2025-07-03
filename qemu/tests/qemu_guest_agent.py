@@ -129,7 +129,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         s, o = session.cmd_status_output(cmd_check_pkg)
         if s == 0 and self.params.get("os_variant", "") == "rhel8":
             error_context.context(
-                "Check if the installed pkg is the specific" " one for rhel8 guest.",
+                "Check if the installed pkg is the specific one for rhel8 guest.",
                 LOG_JOB.info,
             )
             version_list = []
@@ -143,7 +143,7 @@ class QemuGuestAgentTest(BaseVirtTest):
                         version_list.append(qga_v[0])
                 self.qga_v = version_list[-1]
                 LOG_JOB.info(
-                    "The installed and the specific pkg " "version is %s", version_list
+                    "The installed and the specific pkg version is %s", version_list
                 )
             if len(version_list) < 2:
                 self.test.error(
@@ -212,11 +212,11 @@ class QemuGuestAgentTest(BaseVirtTest):
         s_inst, o_inst = session.cmd_status_output(self.gagent_install_cmd)
         if s_inst != 0:
             self.test.fail(
-                "qemu-guest-agent install failed," " the detailed info:\n%s." % o_inst
+                "qemu-guest-agent install failed, the detailed info:\n%s." % o_inst
             )
         if self.params.get("os_variant", "") == "rhel8" and s_check == 0:
             error_context.context(
-                "A new pkg is installed, so restart" " qemu-guest-agent service.",
+                "A new pkg is installed, so restart qemu-guest-agent service.",
                 LOG_JOB.info,
             )
             restart_cmd = self.params["gagent_restart_cmd"]
@@ -257,8 +257,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         # for windows guest,return code is not zero
         if s and "already been started" not in o:
             self.test.fail(
-                "Could not start qemu-ga service in VM '%s',"
-                "detail: '%s'" % (vm.name, o)
+                "Could not start qemu-ga service in VM '%s',detail: '%s'" % (vm.name, o)
             )
 
     @error_context.context_aware
@@ -275,8 +274,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         # for windows guest,return code is not zero.
         if s and "is not started" not in o:
             self.test.fail(
-                "Could not stop qemu-ga service in VM '%s', "
-                "detail: '%s'" % (vm.name, o)
+                "Could not stop qemu-ga service in VM '%s', detail: '%s'" % (vm.name, o)
             )
 
     @error_context.context_aware
@@ -306,9 +304,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         error_context.context("Check if guest agent work.", LOG_JOB.info)
 
         if not self.gagent:
-            self.test.error(
-                "Could not find guest agent object " "for VM '%s'" % vm.name
-            )
+            self.test.error("Could not find guest agent object for VM '%s'" % vm.name)
         self.gagent.verify_responsive()
         LOG_JOB.info(self.gagent.cmd("guest-info"))
 
@@ -333,9 +329,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         get_sebool_cmd = params["getsebool_cmd"]
         value_selinux_bool_guest = session.cmd_output(get_sebool_cmd).strip()
         if value_selinux_bool_guest != value:
-            self.test.error(
-                "Set boolean virt_qemu_ga_read_nonsecurity_files " "failed."
-            )
+            self.test.error("Set boolean virt_qemu_ga_read_nonsecurity_files failed.")
 
     @error_context.context_aware
     def log_persistence(self, params, session):
@@ -353,7 +347,7 @@ class QemuGuestAgentTest(BaseVirtTest):
             self._open_session_list.append(session)
             if self.params.get("os_variant", "") == "rhel8":
                 error_context.context(
-                    "Get the qemu-guest-agent pkg" " for rhel8 guest.", LOG_JOB.info
+                    "Get the qemu-guest-agent pkg for rhel8 guest.", LOG_JOB.info
                 )
                 cmd_check_qga_installlog = params["cmd_check_qga_installlog"]
                 s, o = session.cmd_status_output(cmd_check_qga_installlog)
@@ -608,8 +602,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             try:
                 if "core-dump" in output:
                     test.fail(
-                        "Guest-agent aborts after guest-shutdown"
-                        " detail: '%s'" % output
+                        "Guest-agent aborts after guest-shutdown detail: '%s'" % output
                     )
             finally:
                 session.cmd("rm -rf %s" % params["journal_file"])
@@ -636,7 +629,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session = self._get_session(self.params, None)
             session.close()
         except Exception as detail:
-            test.fail("Could not login to guest" " detail: '%s'" % detail)
+            test.fail("Could not login to guest detail: '%s'" % detail)
 
     @error_context.context_aware
     def gagent_check_halt(self, test, params, env):
@@ -658,7 +651,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.vm.destroy(gracefully=False)
         except Exception as detail:
             LOG_JOB.warning(
-                "Got an exception when force destroying guest:" " '%s'", detail
+                "Got an exception when force destroying guest: '%s'", detail
             )
 
     @error_context.context_aware
@@ -743,11 +736,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                             " isn't aligned with what it's in guest."
                         )
                 if vcpu["logical-id"] != 0 and vcpu["can-offline"] is False:
-                    test.fail("The vcpus should be able to offline " "except vcpu0.")
+                    test.fail("The vcpus should be able to offline except vcpu0.")
             if params.get("os_type") == "windows" and vcpu["can-offline"]:
-                test.fail(
-                    "All vcpus should not be able to offline in" " windows guest."
-                )
+                test.fail("All vcpus should not be able to offline in windows guest.")
 
         error_context.context("Check cpu number.", LOG_JOB.info)
         output = session.cmd_output(params["get_cpu_cmd"])
@@ -843,13 +834,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session.cmd(cmd_offline_mem % mem_phys_index)
 
         error_context.context(
-            "Verify it's changed to offline status via" " agent.", LOG_JOB.info
+            "Verify it's changed to offline status via agent.", LOG_JOB.info
         )
         mem_blocks = self.gagent.get_memory_blocks()
         if mem_blocks[mem_list_index]["online"] is not False:
             test.fail(
-                "%s phys-index memory block is still online"
-                " via agent." % mem_phys_index
+                "%s phys-index memory block is still online via agent." % mem_phys_index
             )
 
         error_context.context("Verify the memory block unit size.", LOG_JOB.info)
@@ -863,7 +853,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             )
 
         error_context.context(
-            "Offline some memory blocks which can be" " offline via agent.",
+            "Offline some memory blocks which can be offline via agent.",
             LOG_JOB.info,
         )
         # record the memory blocks which will be offline
@@ -886,7 +876,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         if mem_blocks_list is not None:
             self.gagent.set_memory_blocks(mem_blocks_list)
             error_context.context(
-                "Verify memory size is decreased after" " offline.", LOG_JOB.info
+                "Verify memory size is decreased after offline.", LOG_JOB.info
             )
             mem_size = session.cmd_output(cmd_get_mem)
             mem_size_aft_offline_qga = mem_size.strip().split()[1]
@@ -903,7 +893,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             )
 
         error_context.context(
-            "Recovery the memory blocks which are set to" " offline before.",
+            "Recovery the memory blocks which are set to offline before.",
             LOG_JOB.info,
         )
         # record the memory blocks which will be online
@@ -925,7 +915,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             )
 
         error_context.context(
-            "Offline one memory block which can't be" " offline.", LOG_JOB.info
+            "Offline one memory block which can't be offline.", LOG_JOB.info
         )
         mem_blocks = self.gagent.get_memory_blocks()
         for memory in mem_blocks:
@@ -934,8 +924,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 break
         else:
             LOG_JOB.info(
-                "There is no required memory block that can-offline"
-                " attribute is False."
+                "There is no required memory block that can-offline attribute is False."
             )
             return
         mem_blocks_list = [
@@ -1106,7 +1095,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session.cmd(time_service_start_cmd)
 
         error_context.context(
-            "Config time resource and restart time" " service.", LOG_JOB.info
+            "Config time resource and restart time service.", LOG_JOB.info
         )
         session.cmd(time_config_cmd)
         session.cmd(time_service_stop_cmd)
@@ -1157,7 +1146,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             return memory_usage
         except Exception:
             raise exceptions.TestError(
-                "Get invalid memory usage by " "cmd '%s' (%s)" % (cmd, output)
+                "Get invalid memory usage by cmd '%s' (%s)" % (cmd, output)
             )
 
     @error_context.context_aware
@@ -1258,7 +1247,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 return genio.read_one_line(path).strip()
             except IOError:
                 LOG_JOB.warning(
-                    "could not get bitmap info, path '%s' is " "not exist", path
+                    "could not get bitmap info, path '%s' is not exist", path
                 )
             return ""
 
@@ -1348,8 +1337,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         if total_block_after_trim > total_block_before_trim:
             test.fail(
-                "the bitmap_after_trim is lager, the command"
-                "guest-fstrim may not work"
+                "the bitmap_after_trim is lager, the commandguest-fstrim may not work"
             )
         if self.vm:
             self.vm.destroy()
@@ -1506,8 +1494,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             status = process.system(params["ssh_keygen_cmd"], shell=True)
             if status:
                 test.error(
-                    "Can not generate ssh key with no "
-                    "interaction, please have a check."
+                    "Can not generate ssh key with no interaction, please have a check."
                 )
             cmd_get_hostkey = params["cmd_get_hostkey"]
             host_key = process.getoutput(cmd_get_hostkey)
@@ -1543,8 +1530,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             for keys_ga in keys_ga_list:
                 if keys_ga not in keys_guest:
                     test.fail(
-                        "Key %s is not same with guest, "
-                        "%s ssh keys failed." % keys_ga,
+                        "Key %s is not same with guest, %s ssh keys failed." % keys_ga,
                         status,
                     )
 
@@ -1579,9 +1565,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         keys_qga, keys_guest = ssh_key_test("remove", guest_user, host_key1, host_key3)
         for key in [host_key1, host_key3]:
             if key in keys_guest.replace("\n", ","):
-                test.fail(
-                    "Key %s is still in guest," "Can not remove key in guest." % key
-                )
+                test.fail("Key %s is still in guest,Can not remove key in guest." % key)
         _login_guest_test(guest_ip_ipv4)
 
         error_context.context("Check whether can reset keys", LOG_JOB.info)
@@ -1608,7 +1592,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self._open_session_list.append(session)
 
         error_context.context(
-            "Check cpustats info of guest and " "number of cpus.", LOG_JOB.info
+            "Check cpustats info of guest and number of cpus.", LOG_JOB.info
         )
         cs_info_qga = self.gagent.get_cpustats()
         cpu_num_guest = int(session.cmd_output(params["cpu_num_guest"]))
@@ -1660,7 +1644,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         key_list = params["diskstats_info_list"].split(",")
         num_arg_def = len(list(key_list))
         if num_arg_guest != num_arg_def:
-            test.error("Diskstats argument numbers may change, " "please take a look.")
+            test.error("Diskstats argument numbers may change, please take a look.")
 
         disk_num_qga = 0
         improper_list = []
@@ -1698,7 +1682,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             disk_num_qga += 1
 
         error_context.context(
-            "Check diskstats arguments whether are " "corresponding.", LOG_JOB.info
+            "Check diskstats arguments whether are corresponding.", LOG_JOB.info
         )
         if improper_list:
             test.fail("Diskstats info is not totally correct: %s" % improper_list)
@@ -1801,18 +1785,18 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         os_type = self.params["os_type"]
 
         error_context.context(
-            "Get the available interface name via" " guest-network-get-interfaces cmd.",
+            "Get the available interface name via guest-network-get-interfaces cmd.",
             LOG_JOB.info,
         )
         ret = self.gagent.get_network_interface()
         if_name, if_index = get_interface(ret, mac_addr)
         if not if_name:
             test.fail(
-                "Did not get the expected interface," " the network info is \n%s." % ret
+                "Did not get the expected interface, the network info is \n%s." % ret
             )
 
         error_context.context(
-            "Check the available interface name %s" " via qga." % if_name, LOG_JOB.info
+            "Check the available interface name %s via qga." % if_name, LOG_JOB.info
         )
         if os_type == "linux":
             if_name_guest = utils_net.get_linux_ifname(session_serial, mac_addr)
@@ -1835,7 +1819,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         #  from guest agent
         if os_type == "linux":
             error_context.context(
-                "Create a new bridge in guest and check the" "result from qga.",
+                "Create a new bridge in guest and check theresult from qga.",
                 LOG_JOB.info,
             )
             add_brige_cmd = "ip link add name br0 type bridge"
@@ -1865,7 +1849,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session_serial.cmd(self.params["cmd_enable_network"] % if_name)
 
         error_context.context(
-            "Change ipv4 address and check the result " "from qga.", LOG_JOB.info
+            "Change ipv4 address and check the result from qga.", LOG_JOB.info
         )
         # for linux guest, need to delete ip address first
         if os_type == "linux":
@@ -2098,9 +2082,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                             "This is not the desired information: ('%s')" % str(detail)
                         )
                 else:
-                    test.fail(
-                        "agent shutdown command shouldn't succeed for " "freeze FS"
-                    )
+                    test.fail("agent shutdown command shouldn't succeed for freeze FS")
         finally:
             try:
                 gagent.fsthaw(check_status=False)
@@ -2225,7 +2207,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
         error_context.context(
-            "Change guest-file related cmd to white list" " and get guest file name."
+            "Change guest-file related cmd to white list and get guest file name."
         )
         session, tmp_file = self._guest_file_prepare()
 
@@ -2236,7 +2218,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_flush(ret_handle)
 
         error_context.context(
-            "Seek to one position and read file with " "file-seek/read cmd.",
+            "Seek to one position and read file with file-seek/read cmd.",
             LOG_JOB.info,
         )
         self.gagent.guest_file_seek(ret_handle, 0, 0)
@@ -2247,7 +2229,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self._read_check(ret_handle, "he", 2)
 
         LOG_JOB.info(
-            "Seek the position to file beginning, offset is 2, and " "read 2 bytes."
+            "Seek the position to file beginning, offset is 2, and read 2 bytes."
         )
         self.gagent.guest_file_seek(ret_handle, 2, 0)
         self._read_check(ret_handle, "ll", 2)
@@ -2256,9 +2238,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent.guest_file_seek(ret_handle, 2, 1)
         self._read_check(ret_handle, "world", 5)
 
-        LOG_JOB.info(
-            "Seek from the file end position, offset is -5 and " "read 3 byte."
-        )
+        LOG_JOB.info("Seek from the file end position, offset is -5 and read 3 byte.")
         self.gagent.guest_file_seek(ret_handle, -5, 2)
         self._read_check(ret_handle, "orl", 3)
 
@@ -2283,12 +2263,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
         error_context.context(
-            "Change guest-file related cmd to white list" " and get guest file name."
+            "Change guest-file related cmd to white list and get guest file name."
         )
         session, tmp_file = self._guest_file_prepare()
 
         error_context.context(
-            "Create new file with mode 'w' and do file" " write test", LOG_JOB.info
+            "Create new file with mode 'w' and do file write test", LOG_JOB.info
         )
         ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="w+"))
         content = "hello world\n"
@@ -2303,7 +2283,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self._read_check(ret_handle, content_check)
 
         error_context.context(
-            "Write more than all counts bytes to" " guest file.", LOG_JOB.info
+            "Write more than all counts bytes to guest file.", LOG_JOB.info
         )
         try:
             self.gagent.guest_file_write(ret_handle, content, 15)
@@ -2358,7 +2338,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                     )
 
         error_context.context(
-            "Change guest-file related cmd to white list" " and get guest file name."
+            "Change guest-file related cmd to white list and get guest file name."
         )
         session, tmp_file = self._guest_file_prepare()
         content = "helloworld\n"
@@ -2367,12 +2347,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         cmd_create_file = "echo helloworld > %s" % tmp_file
         session.cmd(cmd_create_file)
         error_context.context(
-            "Open guest file via guest-file-open with" " read only mode.", LOG_JOB.info
+            "Open guest file via guest-file-open with read only mode.", LOG_JOB.info
         )
         # default is read mode
         ret_handle = int(self.gagent.guest_file_open(tmp_file))
         error_context.context(
-            "Read the content and check the result via" " guest-file cmd", LOG_JOB.info
+            "Read the content and check the result via guest-file cmd", LOG_JOB.info
         )
         self._read_check(ret_handle, content)
         self.gagent.guest_file_close(ret_handle)
@@ -2382,7 +2362,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.vm.copy_files_to("/tmp/big_file", tmp_file)
 
         error_context.context(
-            "Open the big guest file via guest-file-open with" " read only mode.",
+            "Open the big guest file via guest-file-open with read only mode.",
             LOG_JOB.info,
         )
         ret_handle = int(self.gagent.guest_file_open(tmp_file))
@@ -2415,8 +2395,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             except guest_agent.VAgentCmdError as detail:
                 if not re.search("invalid for argument count", str(detail)):
                     test.fail(
-                        "Return error but is not the desired info: "
-                        "('%s')" % str(detail)
+                        "Return error but is not the desired info: ('%s')" % str(detail)
                     )
                 else:
                     LOG_JOB.info(
@@ -2428,7 +2407,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 test.fail("Did not get the expected result.")
 
         error_context.context(
-            "Read the file with an valid big count" " number.", LOG_JOB.info
+            "Read the file with an valid big count number.", LOG_JOB.info
         )
         self.gagent.guest_file_seek(ret_handle, 0, 0)
         # if guest os resource is enough, will return no error.
@@ -2451,9 +2430,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             res_linux = "No such file or directory"
             res_windows = "system cannot find the file"
             if res_windows not in str(detail) and res_linux not in str(detail):
-                test.fail(
-                    "This is not the desired information: " "('%s')" % str(detail)
-                )
+                test.fail("This is not the desired information: ('%s')" % str(detail))
         else:
             test.fail("Should not pass with none existing file.")
 
@@ -2475,7 +2452,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
         error_context.context(
-            "Change guest-file related cmd to white list" " and get guest file name."
+            "Change guest-file related cmd to white list and get guest file name."
         )
         session, tmp_file = self._guest_file_prepare()
 
@@ -2487,18 +2464,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         except guest_agent.VAgentCmdError as detail:
             if not re.search("guest-file-open has been disabled", str(detail)):
                 self.test.fail(
-                    "This is not the desired information: " "('%s')" % str(detail)
+                    "This is not the desired information: ('%s')" % str(detail)
                 )
         else:
-            self.test.fail(
-                "guest-file-open command shouldn't succeed " "for freeze FS."
-            )
+            self.test.fail("guest-file-open command shouldn't succeed for freeze FS.")
         finally:
             self.gagent.fsthaw()
 
-        error_context.context(
-            "After thaw fs, try to operate guest" " file.", LOG_JOB.info
-        )
+        error_context.context("After thaw fs, try to operate guest file.", LOG_JOB.info)
         ret_handle = int(self.gagent.guest_file_open(tmp_file, mode="a+"))
         self.gagent.guest_file_write(ret_handle, content)
         self.gagent.guest_file_flush(ret_handle)
@@ -2607,20 +2580,20 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self._change_bl(session)
 
         error_context.context(
-            "Create and write content to temp file and" " non temp file.", LOG_JOB.info
+            "Create and write content to temp file and non temp file.", LOG_JOB.info
         )
         session.cmd("echo 'hello world' > %s" % guest_temp_file)
         session.cmd("echo 'hello world' > %s" % guest_file)
 
         error_context.context(
-            "Set selinux policy to 'Enforcing' mode in" " guest.", LOG_JOB.info
+            "Set selinux policy to 'Enforcing' mode in guest.", LOG_JOB.info
         )
         if session.cmd_output("getenforce").strip() != "Enforcing":
             session.cmd("setenforce 1")
         result_check_enforcing()
 
         error_context.context(
-            "Set selinux policy to 'Permissive' mode in" " guest.", LOG_JOB.info
+            "Set selinux policy to 'Permissive' mode in guest.", LOG_JOB.info
         )
         session.cmd("setenforce 0")
         result_check_permissive()
@@ -2699,30 +2672,26 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                             out_data,
                         )
                     elif "err-data" in result:
-                        test.fail(
-                            "When exitcode is 0, should not return" " error data."
-                        )
+                        test.fail("When exitcode is 0, should not return error data.")
                     else:
                         test.fail("There is no output with capture_output is true.")
                 else:
                     if "out-data" in result:
-                        test.fail(
-                            "When exitcode is 1, should not return" " output data."
-                        )
+                        test.fail("When exitcode is 1, should not return output data.")
                     elif "err-data" in result:
                         err_data = base64.b64decode(result["err-data"]).decode()
                         LOG_JOB.info(
-                            "The guest cmd failed," "the error info is:\n%s", err_data
+                            "The guest cmd failed,the error info is:\n%s", err_data
                         )
                     else:
-                        test.fail("There is no output with capture_output is " "true.")
+                        test.fail("There is no output with capture_output is true.")
             else:
                 # for windows guest,no matter what exitcode is,
                 #  the return key is out-data
                 if "out-data" in result:
                     out_data = base64.b64decode(result["out-data"]).decode()
                     LOG_JOB.info(
-                        "The guest cmd is executed successfully," "the output is:\n%s.",
+                        "The guest cmd is executed successfully,the output is:\n%s.",
                         out_data,
                     )
                 else:
@@ -2891,9 +2860,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 self.gagent.fsthaw(check_status=False)
             except Exception as detail:
                 # Ignore exception for this thaw action.
-                LOG_JOB.warning(
-                    "Finally failed to thaw guest fs," " detail: '%s'", detail
-                )
+                LOG_JOB.warning("Finally failed to thaw guest fs, detail: '%s'", detail)
             raise
         # check after fsthaw
         self._action_after_fsthaw(write_cmd_guest, write_cmd_timeout)
@@ -2967,9 +2934,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 120,
             )
             if disk_index:
-                LOG_JOB.info(
-                    "Clear readonly for disk and online it in" " windows guest."
-                )
+                LOG_JOB.info("Clear readonly for disk and online it in windows guest.")
                 if not utils_disk.update_windows_disk_attributes(session, disk_index):
                     test.error("Failed to update windows disk attributes.")
                 mnt_point_data = utils_disk.configure_empty_disk(
@@ -2995,7 +2960,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self._fsfreeze(fsfreeze_list=True, mountpoints=mpoint)
 
         error_context.context(
-            "Freeze fs with one valid mountpoint and" " one invalid mountpoint.",
+            "Freeze fs with one valid mountpoint and one invalid mountpoint.",
             LOG_JOB.info,
         )
         if params.get("os_type") == "linux":
@@ -3188,7 +3153,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 )
                 if disk_index:
                     LOG_JOB.info(
-                        "Clear readonly for disk and online it in " "windows guest."
+                        "Clear readonly for disk and online it in windows guest."
                     )
                     if not utils_disk.update_windows_disk_attributes(
                         session, disk_index
@@ -3213,8 +3178,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         "fsfreeze is limited up to 10 seconds", str(detail)
                     ):
                         test.error(
-                            "guest-fsfreeze-thaw cmd failed with:"
-                            "('%s')" % str(detail)
+                            "guest-fsfreeze-thaw cmd failed with:('%s')" % str(detail)
                         )
             self.vm.verify_alive()
             if params.get("os_type") == "linux":
@@ -3236,13 +3200,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         self.gagent_start(session, self.vm)
 
         error_context.context(
-            "Get the default path of fsfreeze-hook in" " qemu-ga help.", LOG_JOB.info
+            "Get the default path of fsfreeze-hook in qemu-ga help.", LOG_JOB.info
         )
         s, o = session.cmd_status_output(params["cmd_get_help_info"])
         help_cmd_hook_path = o.strip().replace(")", "").split()[-1]
 
         error_context.context(
-            "Get the default path of fsfreeze-hook in" " man page.", LOG_JOB.info
+            "Get the default path of fsfreeze-hook in man page.", LOG_JOB.info
         )
         LOG_JOB.info("Export qemu-ga man page to guest file.")
         qga_man_file = "/tmp/man_file"
@@ -3292,8 +3256,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             hook_log = session.cmd_output("cat %s" % log_path)
             if msg not in hook_log.strip().splitlines()[-2]:
                 test.fail(
-                    "Fsfreeze hook test failed\nthe fsfreeze"
-                    " hook log is %s." % hook_log
+                    "Fsfreeze hook test failed\nthe fsfreeze hook log is %s." % hook_log
                 )
 
         session = self._get_session(self.params, None)
@@ -3309,15 +3272,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         if "rhel" in os_ver and int(re.findall(pattern, os_ver)[0]) <= 8:
             expect_file_nums = 5
         if len(hook_files.strip().split()) < expect_file_nums:
-            test.fail(
-                "Fsfreeze hook files are missed, the output is" " %s" % hook_files
-            )
+            test.fail("Fsfreeze hook files are missed, the output is %s" % hook_files)
 
         error_context.context(
-            "Checking fsfreeze hook path set in config" " file.", LOG_JOB.info
+            "Checking fsfreeze hook path set in config file.", LOG_JOB.info
         )
         config_file = "/etc/sysconfig/qemu-ga"
-        cmd_get_hook_path = "cat %s | grep" " ^FSFREEZE_HOOK_PATHNAME" % config_file
+        cmd_get_hook_path = "cat %s | grep ^FSFREEZE_HOOK_PATHNAME" % config_file
         o_path = session.cmd_output(cmd_get_hook_path)
         hook_path = o_path.strip().split("=")[1]
 
@@ -3329,7 +3290,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             )
 
         error_context.context(
-            "Checking if agent service is using the" " fsfreeze hook.", LOG_JOB.info
+            "Checking if agent service is using the fsfreeze hook.", LOG_JOB.info
         )
         cmd_get_hook = "ps aux |grep /usr/bin/qemu-ga |grep fsfreeze-hook"
         hook_path_info = session.cmd_output(cmd_get_hook).strip()
@@ -3359,23 +3320,23 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             )
 
         error_context.context(
-            "Create a simple script to verify fsfreeze" " hook.", LOG_JOB.info
+            "Create a simple script to verify fsfreeze hook.", LOG_JOB.info
         )
         cmd_get_user_path = (
-            "rpm -ql qemu-guest-agent |grep fsfreeze-hook.d" " |grep -v /usr/share"
+            "rpm -ql qemu-guest-agent |grep fsfreeze-hook.d |grep -v /usr/share"
         )
         output = session.cmd_output(cmd_get_user_path)
         user_script_path = output.strip().split("\n")[-1]
         user_script_path += "/user_script.sh"
 
         cmd_create_script = (
-            "echo \"printf 'testing %%s:%%s\\n' \\$0 \\$@\"" " > %s" % user_script_path
+            "echo \"printf 'testing %%s:%%s\\n' \\$0 \\$@\" > %s" % user_script_path
         )
         session.cmd(cmd_create_script)
         session.cmd("chmod +x %s" % user_script_path)
 
         error_context.context(
-            "Issue fsfreeze and thaw commands and check" " logs.", LOG_JOB.info
+            "Issue fsfreeze and thaw commands and check logs.", LOG_JOB.info
         )
         cmd_get_log_path = "cat %s |grep ^LOGFILE" % hook_path
         log_path = session.cmd_output(cmd_get_log_path).strip().split("=")[-1]
@@ -3439,14 +3400,14 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         )
 
         error_context.context(
-            "Execute query-chardev when guest agent service " "is on", LOG_JOB.info
+            "Execute query-chardev when guest agent service is on", LOG_JOB.info
         )
         out = self.vm.monitor.query("chardev")
         check_value_frontend_open(out, True)
         session = self._get_session(params, self.vm)
         self.gagent_stop(session, self.vm)
         error_context.context(
-            "Execute query-chardev when guest agent service " "is off", LOG_JOB.info
+            "Execute query-chardev when guest agent service is off", LOG_JOB.info
         )
         out = self.vm.monitor.query("chardev")
         check_value_frontend_open(out, False)
@@ -3494,19 +3455,17 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.gagent.fsfreeze()
         except guest_agent.VAgentCmdError as detail:
             if not re.search(
-                "timeout when try to receive Frozen event from" " VSS provider",
+                "timeout when try to receive Frozen event from VSS provider",
                 str(detail),
             ):
-                test.fail(
-                    "guest-fsfreeze-freeze cmd failed with:" "('%s')" % str(detail)
-                )
+                test.fail("guest-fsfreeze-freeze cmd failed with:('%s')" % str(detail))
         if self.gagent.verify_fsfreeze_status(self.gagent.FSFREEZE_STATUS_FROZEN):
             try:
                 self.gagent.fsthaw(check_status=False)
             except guest_agent.VAgentCmdError as detail:
                 if not re.search("fsfreeze is limited up to 10 seconds", str(detail)):
                     test.error(
-                        "guest-fsfreeze-thaw cmd failed with:" "('%s')" % str(detail)
+                        "guest-fsfreeze-thaw cmd failed with:('%s')" % str(detail)
                     )
 
         self.gagent_verify(self.params, self.vm)
@@ -3564,9 +3523,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             self.gagent.fsthaw()
         except guest_agent.VAgentCmdError as detail:
             if not re.search("fsfreeze is limited up to 10 seconds", str(detail)):
-                test.error(
-                    "guest-fsfreeze-thaw cmd failed with:" "('%s')" % str(detail)
-                )
+                test.error("guest-fsfreeze-thaw cmd failed with:('%s')" % str(detail))
 
     @error_context.context_aware
     def gagent_check_fsinfo(self, test, params, env):
@@ -3623,7 +3580,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 else:
                     # Disk 'C:' and '/' used space usage have a floating interval,
                     # so set a safe value '10485760'.
-                    LOG_JOB.info("Need to check the floating interval for C: " "or /.")
+                    LOG_JOB.info("Need to check the floating interval for C: or /.")
                     if diff_used_qgaguest > 10485760:
                         test.fail(
                             "File System floating interval is too large,"
@@ -3721,7 +3678,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         session = self._get_session(params, None)
         self._open_session_list.append(session)
         error_context.context(
-            "Issue the no existed guest-agent " "cmd via qga.", LOG_JOB.info
+            "Issue the no existed guest-agent cmd via qga.", LOG_JOB.info
         )
         cmd_wrong = params["wrong_cmd"]
         try:
@@ -3730,7 +3687,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             pattern = "command %s has not been found" % cmd_wrong
             if not re.search(pattern, str(detail), re.I):
                 test.fail(
-                    "The error info is not correct, the return is" " %s." % str(detail)
+                    "The error info is not correct, the return is %s." % str(detail)
                 )
         else:
             test.fail("Should return error info.")
@@ -3757,7 +3714,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             log_str = session.cmd_output(get_log_cmd).strip().split("\n")[-1]
             pattern = r"%s" % qga_cmd
             if not re.findall(pattern, log_str, re.M | re.I):
-                test.fail("The %s command is not recorded in agent" " log." % qga_cmd)
+                test.fail("The %s command is not recorded in agent log." % qga_cmd)
 
         get_log_cmd = params["get_log_cmd"]
         session = self._get_session(self.params, self.vm)
@@ -3790,12 +3747,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param env: Dictionary with test environment.
         """
         error_context.context(
-            "Migrate guest while guest agent service is" " running.", LOG_JOB.info
+            "Migrate guest while guest agent service is running.", LOG_JOB.info
         )
         qemu_migration.set_speed(self.vm, params.get("mig_speed", "1G"))
         self.vm.migrate()
         error_context.context(
-            "Recreate a QemuAgent object after vm" " migration.", LOG_JOB.info
+            "Recreate a QemuAgent object after vm migration.", LOG_JOB.info
         )
         self.gagent = None
         args = [params.get("gagent_serial_type"), params.get("gagent_name")]
@@ -3858,9 +3815,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 120,
             )
             if disk_index:
-                LOG_JOB.info(
-                    "Clear readonly for disk and online it in windows" " guest."
-                )
+                LOG_JOB.info("Clear readonly for disk and online it in windows guest.")
                 if not utils_disk.update_windows_disk_attributes(session, disk_index):
                     test.error("Failed to update windows disk attributes.")
                 mnt_point = utils_disk.configure_empty_disk(
@@ -3884,17 +3839,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 try:
                     session.cmd("umount %s" % mnt_point[0])
                 except ShellTimeoutError:
-                    LOG_JOB.info(
-                        "For rhel6 guest, umount fs will fail after" " fsfreeze."
-                    )
+                    LOG_JOB.info("For rhel6 guest, umount fs will fail after fsfreeze.")
                 else:
-                    test.error(
-                        "For rhel6 guest, umount fs should fail after" " fsfreeze."
-                    )
+                    test.error("For rhel6 guest, umount fs should fail after fsfreeze.")
             else:
                 if not utils_disk.umount(src, mnt_point[0], session=session):
                     test.fail(
-                        "For rhel7+ guest, umount fs should success" " after fsfreeze."
+                        "For rhel7+ guest, umount fs should success after fsfreeze."
                     )
         else:
             detail_cmd = " echo detail disk"
@@ -3910,7 +3861,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                     offline_cmd % did, timeout=120
                 )
                 if status != 0:
-                    test.fail("Can not offline disk: %s with" " fsfreeze." % output)
+                    test.fail("Can not offline disk: %s with fsfreeze." % output)
 
         error_context.context("Thaw fs.", LOG_JOB.info)
         try:
@@ -3925,13 +3876,11 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 if not utils_disk.mount(src, mnt_point[0], session=session):
                     if params["os_variant"] != "rhel6":
                         test.fail(
-                            "For rhel7+ guest, mount fs should success" " after fsthaw."
+                            "For rhel7+ guest, mount fs should success after fsthaw."
                         )
                 else:
                     if params["os_variant"] == "rhel6":
-                        test.fail(
-                            "For rhel6 guest, mount fs should fail after" " fsthaw."
-                        )
+                        test.fail("For rhel6 guest, mount fs should fail after fsthaw.")
             finally:
                 self.gagent_setsebool_value("off", params, self.vm)
         else:
@@ -3992,16 +3941,15 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 if re.search("%s has been disabled" % qga_cmd, str(detail)):
                     LOG_JOB.info("%s cmd is disabled.", qga_cmd)
                 else:
-                    test.fail("%s cmd failed with:" "('%s')" % (qga_cmd, str(detail)))
+                    test.fail("%s cmd failed with:('%s')" % (qga_cmd, str(detail)))
             else:
-                test.fail("%s cmd is not in blacklist," " pls have a check." % qga_cmd)
+                test.fail("%s cmd is not in blacklist, pls have a check." % qga_cmd)
 
         session = self._get_session(params, None)
         self._open_session_list.append(session)
 
         error_context.context(
-            "Try to execute guest-file-open command which"
-            " is in blacklist by default.",
+            "Try to execute guest-file-open command which is in blacklist by default.",
             LOG_JOB.info,
         )
 
@@ -4010,13 +3958,13 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         bl_check("guest-file-open")
 
         error_context.context(
-            "Try to execute guest-info command which is" " not in blacklist.",
+            "Try to execute guest-info command which is not in blacklist.",
             LOG_JOB.info,
         )
         self.gagent.cmd("guest-info")
 
         error_context.context(
-            "Change command in blacklist and restart" " agent service.", LOG_JOB.info
+            "Change command in blacklist and restart agent service.", LOG_JOB.info
         )
         session.cmd("cp /etc/sysconfig/qemu-ga /etc/sysconfig/qemu-ga-bk")
         full_qga_ver = self._get_qga_version(session, self.vm, main_ver=False)
@@ -4040,7 +3988,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session.cmd(params["gagent_restart_cmd"])
 
             error_context.context(
-                "Try to execute guest-file-open and " "guest-info commands again.",
+                "Try to execute guest-file-open and guest-info commands again.",
                 LOG_JOB.info,
             )
             ret_handle = int(self.gagent.guest_file_open(guest_file, mode="a+"))
@@ -4492,7 +4440,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                         )
                     except AttributeError:
                         test.error(
-                            "Not supported virtio " "win media type '%s'", media_type
+                            "Not supported virtio win media type '%s'", media_type
                         )
                     vm_infos[chk_point] = get_content_func(session)
                     if not vm_infos[chk_point]:
@@ -4530,7 +4478,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                     installed_any |= True
                 if not installed_any:
                     test.error(
-                        "Failed to find target devices " "by hwids: '%s'" % device_hwid
+                        "Failed to find target devices by hwids: '%s'" % device_hwid
                     )
 
     @error_context.context_aware
@@ -4580,7 +4528,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 )
 
             error_context.context(
-                "Download qemu-ga package from website " "and copy it to guest.",
+                "Download qemu-ga package from website and copy it to guest.",
                 LOG_JOB.info,
             )
             process.system(gagent_download_cmd)
@@ -4685,9 +4633,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
             error_context.context("Check disk name", LOG_JOB.info)
             if diskname.upper() != disk_info_guest[0].replace("\\", r"\\"):
-                test.fail(
-                    "Disk %s name is different " "between guest and qga." % diskname
-                )
+                test.fail("Disk %s name is different between guest and qga." % diskname)
 
     @error_context.context_aware
     def gagent_check_fsfreeze_vss_test(self, test, params, env):
@@ -4715,7 +4661,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             Before freeze or thaw guest file system, start a background test.
             """
             LOG_JOB.info(
-                "Write time stamp to guest file per second " "as a background job."
+                "Write time stamp to guest file per second as a background job."
             )
             fswrite_cmd = utils_misc.set_winutils_letter(
                 session, self.params["gagent_fs_test_cmd"]
@@ -4739,7 +4685,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             s, o = session.cmd_status_output(k_cmd)
             if s:
                 self.test.error(
-                    "Command '%s' failed, status: %s," " output: %s" % (k_cmd, s, o)
+                    "Command '%s' failed, status: %s, output: %s" % (k_cmd, s, o)
                 )
 
             error_context.context("Check guest FS status.", LOG_JOB.info)
@@ -4757,16 +4703,14 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             for i in list(range(1, len(list_time))):
                 num_d = float(list_time[i]) - float(list_time[i - 1])
                 if num_d > 8:
-                    LOG_JOB.info(
-                        "Time stamp is not continuous," " so the FS is frozen."
-                    )
+                    LOG_JOB.info("Time stamp is not continuous, so the FS is frozen.")
                     fs_status = "frozen"
                     break
             if not fs_status == flag:
                 self.test.fail("FS is not %s, it's %s." % (flag, fs_status))
 
         error_context.context(
-            "Check guest agent command " "'guest-fsfreeze-freeze/thaw'", LOG_JOB.info
+            "Check guest agent command 'guest-fsfreeze-freeze/thaw'", LOG_JOB.info
         )
         session = self._get_session(self.params, None)
         self._open_session_list.append(session)
@@ -4781,7 +4725,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             self.gagent.fsthaw(check_status=False)
 
         error_context.context(
-            "Before freeze/thaw the FS, run the background " "job.", LOG_JOB.info
+            "Before freeze/thaw the FS, run the background job.", LOG_JOB.info
         )
         background_start(session)
         error_context.context("Freeze the FS.", LOG_JOB.info)
@@ -4794,7 +4738,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             result_check("frozen", write_timeout, session)
             # Next, thaw guest fs.
             error_context.context(
-                "Before freeze/thaw the FS, run the background " "job.", LOG_JOB.info
+                "Before freeze/thaw the FS, run the background job.", LOG_JOB.info
             )
             background_start(session)
             error_context.context("Thaw the FS.", LOG_JOB.info)
@@ -4805,7 +4749,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                     LOG_JOB.info("FS is thaw as it's limited up to 10 seconds.")
                 else:
                     test.fail(
-                        "guest-fsfreeze-thaw cmd failed with:" "('%s')" % str(detail)
+                        "guest-fsfreeze-thaw cmd failed with:('%s')" % str(detail)
                     )
         except Exception:
             # Thaw fs finally, avoid problem in following cases.
@@ -4813,9 +4757,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
                 self.gagent.fsthaw(check_status=False)
             except Exception as detail:
                 # Ignore exception for this thaw action.
-                LOG_JOB.warning(
-                    "Finally failed to thaw guest fs," " detail: '%s'", detail
-                )
+                LOG_JOB.warning("Finally failed to thaw guest fs, detail: '%s'", detail)
             raise
         error_context.context(
             "Waiting %s, then finish writing the time "
@@ -4918,7 +4860,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         def execute_qga_cmds_loop():
             for i in range(repeats):
                 if os.environ["AVCADO_TP_QEMU_GUEST_AGENT_SIGNAL"] == "True":
-                    LOG_JOB.info("execute 'get-osinfo/devices'" " %s times", (i + 1))
+                    LOG_JOB.info("execute 'get-osinfo/devices' %s times", (i + 1))
                     self.gagent.get_osinfo()
                     self.gagent.get_virtio_device()
                 else:
@@ -5032,8 +4974,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         kill_qga_program_cmd = params["kill_qga_program_cmd"]
 
         error_context.context(
-            "Check qemu-ga service status and stop it, "
-            "then run qemu-ga as a program",
+            "Check qemu-ga service status and stop it, then run qemu-ga as a program",
             test.log.info,
         )
         if self._check_ga_service(session, params.get("gagent_status_cmd")):
@@ -5085,7 +5026,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         qga_ver_installer = str(self.gagent.guest_info()["version"])
 
         error_context.context(
-            "Check if qga version is corresponding between" "msi and installer.exe",
+            "Check if qga version is corresponding betweenmsi and installer.exe",
             test.log.info,
         )
         if not qga_ver_installer:
@@ -5119,7 +5060,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         s, o = session.cmd_status_output(cmd_run_debugview)
         if s:
             test.error(
-                "Debugviewconsole.exe run failed, " "Please check the output is: %s" % o
+                "Debugviewconsole.exe run failed, Please check the output is: %s" % o
             )
         gagent.fsfreeze()
         gagent.fsthaw()

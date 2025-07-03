@@ -60,8 +60,7 @@ def run(test, params, env):
     delete_scsi_device(scsi_addr)
     if check_scsi_disk_by_address(scsi_addr):
         test.fail(
-            "The scsi disk(@%s) appears in guest "
-            "after disable scsi drive." % scsi_addr
+            "The scsi disk(@%s) appears in guest after disable scsi drive." % scsi_addr
         )
 
     scan_scsi_device(scsi_addr)

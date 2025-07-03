@@ -26,7 +26,7 @@ def modify_driver(params, session):
     chk_pat = r"ACPI\\ACPI0010.*\: Generic Bus"
     if not re.search(chk_pat, session.cmd(chk_cmd)):
         error_context.context(
-            "Install 'HID Button over Interrupt Driver' " "to Generic Bus", LOG_JOB.info
+            "Install 'HID Button over Interrupt Driver' to Generic Bus", LOG_JOB.info
         )
         inst_cmd = "%s install %s %s" % (
             devcon_path,

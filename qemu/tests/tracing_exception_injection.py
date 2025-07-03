@@ -26,7 +26,7 @@ def run(test, params, env):
     if host_cmd_output:
         if host_cmd_output.split()[1] == "0":
             test.fail(
-                "kvm_stat did not provide the expected " "output: %s" % host_cmd_output
+                "kvm_stat did not provide the expected output: %s" % host_cmd_output
             )
         test.log.info("kvm_stat provided the expected output")
     test.log.info("Host cmd output '%s'", host_cmd_output)

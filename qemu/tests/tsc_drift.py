@@ -98,6 +98,6 @@ def run(test, params, env):
             success = False
 
     if not success:
-        test.fail("TSC drift found for the guest, please check the " "log for details")
+        test.fail("TSC drift found for the guest, please check the log for details")
 
     session.close()

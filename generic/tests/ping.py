@@ -33,7 +33,7 @@ def _ping_with_params(
             timeout=timeout,
         )
     if status != 0:
-        test.fail("Ping failed, status: %s," " output: %s" % (status, output))
+        test.fail("Ping failed, status: %s, output: %s" % (status, output))
     if params.get("strict_check", "no") == "yes":
         ratio = utils_test.get_loss_ratio(output)
         if ratio != 0:
@@ -141,8 +141,7 @@ def run(test, params, env):
 
                 # ping to check whether the network is alive
                 error_context.context(
-                    "Ping test after flood ping,"
-                    " Check if the network is still alive",
+                    "Ping test after flood ping, Check if the network is still alive",
                     test.log.info,
                 )
                 _ping_with_params(

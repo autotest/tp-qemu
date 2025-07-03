@@ -29,19 +29,17 @@ class BlockdevIncbkMigrateNoBitmap(BlockdevLiveBackupBaseTest):
         )
         if self._bitmap_debugged:
             if bitmap is None:
-                self.test.fail("No persistent bitmap was found " "after migration")
+                self.test.fail("No persistent bitmap was found after migration")
             if bitmap.get("recording") is not False:
-                self.test.fail("Persistent bitmap was not disabled " "after migration")
+                self.test.fail("Persistent bitmap was not disabled after migration")
             v = debug_block_dirty_bitmap_sha256(
                 self.main_vm, self._source_nodes[0], self._bitmaps[0]
             )
             if self._bitmap_sha256 != v:
-                self.test.fail("Persistent bitmap sha256 changed " "after migration")
+                self.test.fail("Persistent bitmap sha256 changed after migration")
         else:
             if bitmap is not None:
-                self.test.fail(
-                    "Got non-persistent bitmap unexpectedly " "after migration"
-                )
+                self.test.fail("Got non-persistent bitmap unexpectedly after migration")
 
     def get_bitmap_sha256(self):
         if self._bitmap_debugged:

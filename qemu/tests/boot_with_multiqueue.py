@@ -67,7 +67,7 @@ def run(test, params, env):
     else:
         # verify driver
         error_context.context(
-            "Check if the driver is installed and " "verified", test.log.info
+            "Check if the driver is installed and verified", test.log.info
         )
         driver_name = params.get("driver_name", "netkvm")
         session = utils_test.qemu.windrv_check_running_verifier(

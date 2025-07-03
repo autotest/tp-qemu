@@ -62,7 +62,7 @@ class MlockBasic(object):
         Start mlock basic test
         """
         error_context.context(
-            "Get nr_mlock and nr_unevictable in host" " before VM start!", LOG_JOB.info
+            "Get nr_mlock and nr_unevictable in host before VM start!", LOG_JOB.info
         )
         self.mlock_pre = read_from_vmstat("nr_mlock")
         self.unevictable_pre = read_from_vmstat("nr_unevictable")
@@ -81,7 +81,7 @@ class MlockBasic(object):
         self.vm.verify_alive()
 
         error_context.context(
-            "Get nr_mlock and nr_unevictable in host" " after VM start!", LOG_JOB.info
+            "Get nr_mlock and nr_unevictable in host after VM start!", LOG_JOB.info
         )
         self.mlock_post = read_from_vmstat("nr_mlock")
         self.unevictable_post = read_from_vmstat("nr_unevictable")

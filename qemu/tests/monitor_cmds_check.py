@@ -30,7 +30,7 @@ def run(test, params, env):
 
     black_cmds = params.get("black_cmds", "").split()
     error_context.context(
-        "Verify black commands are unavaliable in " "'%s' monitor" % protocol,
+        "Verify black commands are unavaliable in '%s' monitor" % protocol,
         test.log.info,
     )
     test.log.info("Black commands: %s", black_cmds)

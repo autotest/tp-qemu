@@ -444,7 +444,7 @@ def run(test, params, env):
         dd_session = vm.wait_for_login()
         stress_session = vm.wait_for_login()
         dd_session.sendline(
-            "dd if=/dev/[svh]da of=/tmp/stressblock" " bs=10MB count=100 &"
+            "dd if=/dev/[svh]da of=/tmp/stressblock bs=10MB count=100 &"
         )
         try:
             stress_session.cmd(
@@ -538,7 +538,7 @@ def run(test, params, env):
                         "'%s' of command \n%s" % (missing, cmd, result.stdout)
                     )
             else:
-                test.cancel("New qemu does not support -cpu " "?model. (%s)" % qcver)
+                test.cancel("New qemu does not support -cpu ?model. (%s)" % qcver)
 
     # 2) <qemu-kvm-cmd> -cpu ?dump
     class test_qemu_dump(MiniSubtest):
@@ -558,7 +558,7 @@ def run(test, params, env):
                         "'%s' of command \n%s" % (missing, cmd, result.stdout)
                     )
             else:
-                test.cancel("New qemu does not support -cpu " "?dump. (%s)" % qcver)
+                test.cancel("New qemu does not support -cpu ?dump. (%s)" % qcver)
 
     # 3) <qemu-kvm-cmd> -cpu ?cpuid
     class test_qemu_cpuid(MiniSubtest):
@@ -572,7 +572,7 @@ def run(test, params, env):
                         " '%s' of command \n%s" % (cmd, result.stdout)
                     )
             else:
-                test.cancel("New qemu does not support -cpu " "?cpuid. (%s)" % qcver)
+                test.cancel("New qemu does not support -cpu ?cpuid. (%s)" % qcver)
 
     # 1) boot with cpu_model
     class test_boot_cpu_model(Test_temp):
@@ -621,7 +621,7 @@ def run(test, params, env):
                     "Model unsupported flags: %s", str(flags.cpumodel_unsupport_flags)
                 )
                 test.log.error(
-                    "Flags defined on host but not on found " "on guest: %s",
+                    "Flags defined on host but not on found on guest: %s",
                     str(not_enable_flags),
                 )
             test.log.info("Check main instruction sets.")
@@ -635,7 +635,7 @@ def run(test, params, env):
             test.log.info("Woking CPU flags: %s", str(Flags[0]))
             test.log.info("Not working CPU flags: %s", str(Flags[1]))
             test.log.warning(
-                "Flags works even if not defined on guest cpu " "flags: %s",
+                "Flags works even if not defined on guest cpu flags: %s",
                 str(Flags[0] - guest_flags),
             )
             test.log.warning("Not tested CPU flags: %s", str(Flags[2]))
@@ -684,7 +684,7 @@ def run(test, params, env):
                 fwarn_flags -= not_found
                 if fwarn_flags:
                     test.fail(
-                        "Qemu did not warn the use of " "flags %s" % str(fwarn_flags)
+                        "Qemu did not warn the use of flags %s" % str(fwarn_flags)
                     )
 
     # 3) fail boot unsupported flags
@@ -726,15 +726,14 @@ def run(test, params, env):
                 fwarn_flags -= not_found
                 if fwarn_flags:
                     test.fail(
-                        "Qemu did not warn the use of " "flags %s" % str(fwarn_flags)
+                        "Qemu did not warn the use of flags %s" % str(fwarn_flags)
                     )
 
     # 4) check guest flags under load cpu, stress and system (dd)
     class test_boot_guest_and_try_flags_under_load(Test_temp):
         def test(self):
             test.log.info(
-                "Check guest working cpuflags under load "
-                "cpu and stress and system (dd)"
+                "Check guest working cpuflags under load cpu and stress and system (dd)"
             )
             cpu_model, extra_flags = parse_cpu_model()
 
@@ -864,12 +863,12 @@ def run(test, params, env):
                 stress_session.cmd("killall cpuflags-test")
             except aexpect.ShellCmdError:
                 test.fail(
-                    "Stress cpuflags-test should be still " "running after migration."
+                    "Stress cpuflags-test should be still running after migration."
                 )
             try:
-                stress_session.cmd("ls /tmp/stressblock && " "rm -f /tmp/stressblock")
+                stress_session.cmd("ls /tmp/stressblock && rm -f /tmp/stressblock")
             except aexpect.ShellCmdError:
-                test.fail("Background 'dd' command failed to " "produce output file.")
+                test.fail("Background 'dd' command failed to produce output file.")
 
     def net_send_object(socket, obj):
         """
@@ -944,7 +943,7 @@ def run(test, params, env):
                         test.log.info("Woking CPU flags: %s", str(Flags[0]))
                         test.log.info("Not working CPU flags: %s", str(Flags[1]))
                         test.log.warning(
-                            "Flags works even if not defined on" " guest cpu flags: %s",
+                            "Flags works even if not defined on guest cpu flags: %s",
                             str(Flags[0] - flags.guest_flags),
                         )
                         test.log.warning("Not tested CPU flags: %s", str(Flags[2]))
@@ -985,7 +984,7 @@ def run(test, params, env):
                         test.log.info("Woking CPU flags: %s", str(Flags[0]))
                         test.log.info("Not working CPU flags: %s", str(Flags[1]))
                         test.log.warning(
-                            "Flags works even if not defined on" " guest cpu flags: %s",
+                            "Flags works even if not defined on guest cpu flags: %s",
                             str(Flags[0] - flags.guest_flags),
                         )
                         test.log.warning("Not tested CPU flags: %s", str(Flags[2]))
@@ -1038,8 +1037,7 @@ def run(test, params, env):
                 def ping_pong_migrate(self, sync, worker, check_worker):
                     for _ in range(self.migrate_count):
                         test.log.info(
-                            "File transfer not ended, starting"
-                            " a round of migration..."
+                            "File transfer not ended, starting a round of migration..."
                         )
                         sync.sync(True, timeout=mig_timeout)
                         if self.hostid == self.srchost:
@@ -1080,7 +1078,7 @@ def run(test, params, env):
                         test.log.info("Woking CPU flags: %s", str(Flags[0]))
                         test.log.info("Not working CPU flags: %s", str(Flags[1]))
                         test.log.warning(
-                            "Flags works even if not defined on" " guest cpu flags: %s",
+                            "Flags works even if not defined on guest cpu flags: %s",
                             str(Flags[0] - flags.guest_flags),
                         )
                         test.log.warning("Not tested CPU flags: %s", str(Flags[2]))
@@ -1124,7 +1122,7 @@ def run(test, params, env):
                         test.log.info("Woking CPU flags: %s", str(Flags[0]))
                         test.log.info("Not working CPU flags: %s", str(Flags[1]))
                         test.log.warning(
-                            "Flags works even if not defined on" " guest cpu flags: %s",
+                            "Flags works even if not defined on guest cpu flags: %s",
                             str(Flags[0] - flags.guest_flags),
                         )
                         test.log.warning("Not tested CPU flags: %s", str(Flags[2]))
@@ -1159,4 +1157,4 @@ def run(test, params, env):
             if failed != []:
                 test.fail("Test of cpu models %s failed." % (str(failed)))
     else:
-        test.fail("Test group '%s' is not defined in" " cpuflags test" % test_type)
+        test.fail("Test group '%s' is not defined in cpuflags test" % test_type)

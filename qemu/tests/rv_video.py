@@ -40,7 +40,7 @@ def launch_totem(test, guest_session, params):
         LOG_JOB.info("Redhat Release: %s", release)
     except:
         test.cancel(
-            "Test is only currently supported on " "RHEL and Fedora operating systems"
+            "Test is only currently supported on RHEL and Fedora operating systems"
         )
 
     cmd = "export DISPLAY=:0.0"

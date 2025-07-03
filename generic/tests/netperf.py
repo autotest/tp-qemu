@@ -101,9 +101,7 @@ def run(test, params, env):
                 )
             except process.CmdError as err:
                 if "SIOCSIFMTU" in err.result.stderr.decode():
-                    test.cancel(
-                        "The ethenet device does not support jumbo," "cancel test"
-                    )
+                    test.cancel("The ethenet device does not support jumbo,cancel test")
 
     pinned_node = 0
     host_numa = utils_misc.NumaInfo()

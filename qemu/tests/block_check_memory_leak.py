@@ -83,8 +83,7 @@ def run(test, params, env):
         if ver >= 6.3:
             # bz2235228,cancel test due to known product bug.
             test.cancel(
-                "Skip test for xive kvm interrupt guest due to"
-                " known host crash issue."
+                "Skip test for xive kvm interrupt guest due to known host crash issue."
             )
 
     logger = test.log

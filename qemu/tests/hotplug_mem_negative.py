@@ -93,6 +93,6 @@ def run(test, params, env):
         for target_mem in params.objects("target_mems"):
             mem_params = params.object_params(target_mem)
             error_context.context(
-                "Check %s qemu prompt " "message." % target_mem, test.log.info
+                "Check %s qemu prompt message." % target_mem, test.log.info
             )
             check_msg(mem_params["keywords"], msg[target_mem])

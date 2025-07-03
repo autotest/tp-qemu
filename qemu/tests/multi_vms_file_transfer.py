@@ -79,7 +79,7 @@ def run(test, params, env):
         t_end = time.time()
         throughput = filesize / (t_end - t_begin)
         test.log.info(
-            "File transfer host -> VM1 succeed, " "estimated throughput: %.2fMB/s",
+            "File transfer host -> VM1 succeed, estimated throughput: %.2fMB/s",
             throughput,
         )
         md5_check(session_vm1, orig_md5)
@@ -110,7 +110,7 @@ def run(test, params, env):
             t_end = time.time()
             throughput = filesize / (t_end - t_begin)
             test.log.info(
-                "File transfer VM1 -> VM2 succeed, " "estimated throughput: %.2fMB/s",
+                "File transfer VM1 -> VM2 succeed, estimated throughput: %.2fMB/s",
                 throughput,
             )
             md5_check(session_vm2, orig_md5)
@@ -137,7 +137,7 @@ def run(test, params, env):
             t_end = time.time()
             throughput = filesize / (t_end - t_begin)
             test.log.info(
-                "File transfer VM2 -> VM1 succeed, " "estimated throughput: %.2fMB/s",
+                "File transfer VM2 -> VM1 succeed, estimated throughput: %.2fMB/s",
                 throughput,
             )
             md5_check(session_vm1, orig_md5)

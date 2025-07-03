@@ -74,7 +74,7 @@ class StepMaker(step_editor.StepMakerWindow):
         self.steps_file.flush()
 
         self.vars_file.write(
-            "# This file lists the vars used during recording" " with Step Maker\n"
+            "# This file lists the vars used during recording with Step Maker\n"
         )
         self.vars_file.flush()
 

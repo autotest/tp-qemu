@@ -130,7 +130,7 @@ def run(test, params, env):
         check_ping(status, output)
         # small ping check if the team0 works w/o failover
         error_context.context(
-            "Step3: Start failover testing until " "ping finished", test.log.info
+            "Step3: Start failover testing until ping finished", test.log.info
         )
         failover_thread = utils_misc.InterruptedThread(failover, (ifnames, timeout))
         failover_thread.start()

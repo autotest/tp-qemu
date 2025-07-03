@@ -26,5 +26,5 @@ def run(test, params, env):
             )
         except Exception as msg:
             test.log.error(msg)
-            test.fail("No highlighted entry was detected " "the boot was abnormal.")
+            test.fail("No highlighted entry was detected the boot was abnormal.")
         vm.destroy(gracefully=False)

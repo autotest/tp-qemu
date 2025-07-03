@@ -71,8 +71,7 @@ def run(test, params, env):
             test.log.info("Redhat Release: %s", release)
         except:
             test.cancel(
-                "Test is only currently supported on "
-                "RHEL and Fedora operating systems"
+                "Test is only currently supported on RHEL and Fedora operating systems"
             )
 
         if "release 7." in release:
@@ -84,7 +83,7 @@ def run(test, params, env):
         else:
             spice_vdagent_loginfo_cmd = "tail -n 10 " + spicevdagent_logfile
 
-        cmd = 'echo "SPICE_VDAGENTD_EXTRA_ARGS=-dd">' "/etc/sysconfig/spice-vdagentd"
+        cmd = 'echo "SPICE_VDAGENTD_EXTRA_ARGS=-dd">/etc/sysconfig/spice-vdagentd'
         guest_root_session.cmd(cmd)
 
         test.log.info("Running the logging test for spice-vdagent daemon")
@@ -130,7 +129,7 @@ def run(test, params, env):
             test.fail("Copying to the clipboard failed try block failed")
 
         test.log.debug(
-            "------------ End of script output of the Copying" " Session ------------"
+            "------------ End of script output of the Copying Session ------------"
         )
 
         output = guest_root_session.cmd(

@@ -62,9 +62,7 @@ def run(test, params, env):
             vm.verify_alive()
             vm.wait_for_login(timeout=timeout)
         except Exception:
-            test.log.warning(
-                "Can not restore guest run level, " "need restore the image"
-            )
+            test.log.warning("Can not restore guest run level, need restore the image")
             params["restore_image_after_testing"] = "yes"
 
     if reboot_time > expect_time:

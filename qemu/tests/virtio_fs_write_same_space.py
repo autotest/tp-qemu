@@ -42,12 +42,12 @@ def run(test, params, env):
         guest_addr = vm.get_address()
 
         error_context.context(
-            "Create a destination directory %s" "inside guest." % fs_dest, test.log.info
+            "Create a destination directory %sinside guest." % fs_dest, test.log.info
         )
         utils_misc.make_dirs(fs_dest, session)
 
         error_context.context(
-            "Mount virtiofs target %s to %s inside " "guest." % (fs_target, fs_dest),
+            "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
             test.log.info,
         )
         if not utils_disk.mount(fs_target, fs_dest, "virtiofs", session=session):
@@ -57,7 +57,7 @@ def run(test, params, env):
         test.log.info("The guest file in shared dir is %s", guest_file)
 
         error_context.context(
-            "write to the same space of" " a file with mmap.", test.log.info
+            "write to the same space of a file with mmap.", test.log.info
         )
         test.log.info("Copy the mmap script to guest.")
         host_path = os.path.join(data_dir.get_deps_dir("virtio_fs"), script_create_file)

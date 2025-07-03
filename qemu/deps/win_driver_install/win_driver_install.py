@@ -21,7 +21,7 @@ def cmd_output(cmd):
             cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
         )
     except Exception as err:
-        error_msg = f"Failed to execute cmd {cmd}!\n" f"Details refers: {err}"
+        error_msg = f"Failed to execute cmd {cmd}!\nDetails refers: {err}"
         logger.error(error_msg)
         sys.exit(1)
     stdoutput = p.stdout.readlines()

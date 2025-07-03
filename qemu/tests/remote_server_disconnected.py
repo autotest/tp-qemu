@@ -26,9 +26,7 @@ def run(test, params, env):
             test.cancel("2 remote servers at least are required.")
         for h in hosts:
             if os.path.exists(h) or _is_ipv6_addr(h):
-                test.cancel(
-                    "Neither ipv6 nor unix domain" " socket is supported by now."
-                )
+                test.cancel("Neither ipv6 nor unix domain socket is supported by now.")
 
     hosts = []
     if params.get_boolean("enable_gluster"):

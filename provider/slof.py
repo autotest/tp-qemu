@@ -156,8 +156,9 @@ def verify_boot_device(
     if position in devices:
         name = devices[position]
         info = (
-            "Check whether the device({0}@{1}@{2}) is the {3} bootable "
-            "device.".format(parent_bus_type, child_bus_type, child_addr, position)
+            "Check whether the device({0}@{1}@{2}) is the {3} bootable device.".format(
+                parent_bus_type, child_bus_type, child_addr, position
+            )
         )
         if sub_child_addr:
             info = (

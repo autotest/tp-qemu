@@ -61,7 +61,7 @@ def run(test, params, env):
     failures = []
     for pid in process.get_children_pids(vm.get_shell_pid()):
         error_context.context(
-            "Get the process '%s' u/gid, using 'cat " "/proc/%s/status'" % (pid, pid),
+            "Get the process '%s' u/gid, using 'cat /proc/%s/status'" % (pid, pid),
             test.log.info,
         )
         qemu_ugid = get_ugid_from_processid(pid)

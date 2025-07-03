@@ -59,7 +59,7 @@ def run(test, params, env):
 
     query_package = params["query_package"]
     error_context.context(
-        "Check edk2-ovmf package has been " "installed already", test.log.info
+        "Check edk2-ovmf package has been installed already", test.log.info
     )
     status, output = process.getstatusoutput(
         query_package, ignore_status=True, shell=True
@@ -88,7 +88,7 @@ def run(test, params, env):
             meta_files,
         )
     error_context.context(
-        "Check the 'filename' elements in both json" " files point to valid files.",
+        "Check the 'filename' elements in both json files point to valid files.",
         test.log.info,
     )
     for meta_file in meta_files:

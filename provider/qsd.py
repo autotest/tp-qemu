@@ -489,7 +489,7 @@ class QsdDaemonDev(QDaemonDev):
                 LOG_JOB.warning(e)
                 if not self.is_daemon_alive():
                     LOG_JOB.warning(
-                        "QSD %s down during try to kill it " "by monitor", self.name
+                        "QSD %s down during try to kill it by monitor", self.name
                     )
                     return
             else:

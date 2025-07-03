@@ -156,9 +156,9 @@ class BlockdevBackupBaseTest(object):
 
     @error_context.context_aware
     def blockdev_backup(self):
-        assert len(self.target_disks) >= len(
-            self.source_disks
-        ), "No enough target disks define in cfg!"
+        assert len(self.target_disks) >= len(self.source_disks), (
+            "No enough target disks define in cfg!"
+        )
         source_lst = list(map(lambda x: "drive_%s" % x, self.source_disks))
         target_lst = list(map(lambda x: "drive_%s" % x, self.target_disks))
         bitmap_lst = list(map(lambda x: "bitmap_%s" % x, range(len(self.source_disks))))

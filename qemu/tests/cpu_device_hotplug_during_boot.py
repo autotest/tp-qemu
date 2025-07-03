@@ -54,7 +54,7 @@ def run(test, params, env):
         # 2) Send reboot command directly because it will close the ssh client
         # so we can not get the command status.
         error_context.base_context(
-            "Reboot guest to boot stage, hotunplug the " "vCPU device.", test.log.info
+            "Reboot guest to boot stage, hotunplug the vCPU device.", test.log.info
         )
         vm.wait_for_login().sendline(params["reboot_command"])
 
@@ -65,7 +65,7 @@ def run(test, params, env):
         vm.serial_console.read_until_any_line_matches(boot_patterns)
 
         error_context.context(
-            "Hotunplug vCPU devices, waiting for guest " "alive.", test.log.info
+            "Hotunplug vCPU devices, waiting for guest alive.", test.log.info
         )
         for vcpu_device in reversed(vcpu_devices):
             vm.hotunplug_vcpu_device(vcpu_device)
@@ -76,6 +76,5 @@ def run(test, params, env):
         )
         if not cpu_utils.check_if_vm_vcpus_match_qemu(vm):
             test.fail(
-                "Actual number of guest CPUs is not equal to expected "
-                "after hotunplug."
+                "Actual number of guest CPUs is not equal to expected after hotunplug."
             )

@@ -267,18 +267,17 @@ def run(test, params, env):
         smbios_version = re.findall(params["smbios_version"], output[0], re.S)
         if not smbios_version:
             test.fail(
-                "Failed to find smbios version. " "The command output is %s" % output[0]
+                "Failed to find smbios version. The command output is %s" % output[0]
             )
         bios_version = re.findall(params["bios_version"], output[0], re.S)
         if not bios_version:
             test.fail(
-                "Failed to find bios version. " "The command output is %s" % output[0]
+                "Failed to find bios version. The command output is %s" % output[0]
             )
         bios_release_date = re.search(params["bios_release_date"], output[0], re.S)
         if not bios_release_date:
             test.fail(
-                "Failed to find bios_release_date. "
-                "The command output is %s" % output[0]
+                "Failed to find bios_release_date. The command output is %s" % output[0]
             )
         date_year = bios_version[0][:4]
         date_month = bios_version[0][4:6]

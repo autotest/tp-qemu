@@ -57,7 +57,7 @@ def run(test, params, env):
             test.fail("CPU quantity mismatch cmd after hotplug and reboot !")
 
     error_context.context(
-        "boot the vm, with '-smp X,maxcpus=Y' option," "thus allow hotplug vcpu",
+        "boot the vm, with '-smp X,maxcpus=Y' option,thus allow hotplug vcpu",
         test.log.info,
     )
 
@@ -93,7 +93,7 @@ def run(test, params, env):
 
     test.log.info("current_cpus=%s, total_cpus=%s", current_cpus, total_cpus)
     error_context.context(
-        "check if CPUs in guest matches qemu cmd " "before hot-plug", test.log.info
+        "check if CPUs in guest matches qemu cmd before hot-plug", test.log.info
     )
     if not cpu.check_if_vm_vcpu_match(current_cpus, vm):
         test.error("CPU quantity mismatch cmd before hotplug !")

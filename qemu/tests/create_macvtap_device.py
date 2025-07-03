@@ -44,7 +44,7 @@ def run(test, params, env):
     ifname = utils_net.get_macvtap_base_iface(ifname)
 
     error_context.context(
-        "Verify no other macvtap share the physical " "network device.", test.log.info
+        "Verify no other macvtap share the physical network device.", test.log.info
     )
     macvtap_devices = get_macvtap_device_on_ifname(ifname)
     for device in macvtap_devices:

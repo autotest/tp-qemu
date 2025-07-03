@@ -180,7 +180,7 @@ def run(test, params, env):
             if not ext_host:
                 # Fallback to a hardcode host, eg:
                 test.log.warning(
-                    "Can't get specified host," " Fallback to default host '%s'",
+                    "Can't get specified host, Fallback to default host '%s'",
                     default_host,
                 )
                 ext_host = default_host

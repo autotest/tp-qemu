@@ -57,7 +57,7 @@ def _stop_service(test, params, session, service):
     service_stop_cmd = params.get("service_stop_cmd")
     s, o = session.cmd_status_output("sc query")
     if s:
-        test.error("Failed to query service list, " "status=%s, output=%s" % (s, o))
+        test.error("Failed to query service list, status=%s, output=%s" % (s, o))
     service_item = re.search(r"SERVICE_NAME:\s+%s" % service, o, re.I | re.M)
     if not service_item:
         return

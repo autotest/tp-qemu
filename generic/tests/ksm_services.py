@@ -35,7 +35,7 @@ def test_setting_params(test, ksmctler, params):
         else:
             set_values[key] = default_values[key] + value_delta
     test.log.debug(
-        "\nDefault parameters:%s\n" "Set parameters:%s", default_values, set_values
+        "\nDefault parameters:%s\nSet parameters:%s", default_values, set_values
     )
 
     try:

@@ -59,9 +59,9 @@ def run(test, params, env):
         installer_file = "install-autotest-server.sh"
 
         if autotest_repo == github_repo:
-            installer_url = (
-                "https://raw.github.com/autotest/autotest/%s"
-                "/contrib/%s" % (autotest_branch, installer_file)
+            installer_url = "https://raw.github.com/autotest/autotest/%s/contrib/%s" % (
+                autotest_branch,
+                installer_file,
             )
         else:
             installer_url = (

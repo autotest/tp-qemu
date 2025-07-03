@@ -110,7 +110,7 @@ def run(test, params, env):
             )
         ]
         test.log.debug(
-            "QEMU reported the following supported devices for " "PCI hotplug: %s",
+            "QEMU reported the following supported devices for PCI hotplug: %s",
             devices_supported,
         )
         return dev in devices_supported
@@ -219,7 +219,7 @@ def run(test, params, env):
         after_add = vm.monitor.info("pci")
         if pci_info[pci_num][1] not in str(after_add):
             test.log.error(
-                "Could not find matched id in monitor:" " %s", pci_info[pci_num][1]
+                "Could not find matched id in monitor: %s", pci_info[pci_num][1]
             )
             test.fail(
                 "Add device failed. Monitor command is: %s"

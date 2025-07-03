@@ -140,7 +140,7 @@ def run(test, params, env):
     session = vm.wait_for_login(timeout=timeout)
     if params.get("os_type") == "windows":
         error_context.context(
-            "Check if the driver is installed and " "verified", test.log.info
+            "Check if the driver is installed and verified", test.log.info
         )
         driver_name = params.get("driver_name", "pvpanic")
         session = utils_test.qemu.windrv_check_running_verifier(

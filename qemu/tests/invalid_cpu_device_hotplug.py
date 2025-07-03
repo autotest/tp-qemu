@@ -20,9 +20,7 @@ def run(test, params, env):
     :param params: Dictionary with the test parameters
     :param env: Dictionary with test environment.
     """
-    not_match_err = (
-        "Hotplug %s failed but the error description does not " "match: '%s'"
-    )
+    not_match_err = "Hotplug %s failed but the error description does not match: '%s'"
     expected_info = "Hotplug %s failed as expected, error description: '%s'"
     hotplug_pass_err = "Still able to hotplug %s via qmp"
 

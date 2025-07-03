@@ -56,7 +56,7 @@ def run(test, params, env):
     test.log.info("Ensure the guest has at least two kernel versions")
     kernel_list = session.cmd_output(get_kernel_list_cmd).splitlines()
     if len(kernel_list) < 2:
-        test.cancel("This test requires at least two kernel versions in the " "guest")
+        test.cancel("This test requires at least two kernel versions in the guest")
     if session.cmd_output("grubby --default-index").strip() != "0":
         test.log.info("Ensure that the default kernel index of the guest is 0.")
         session.cmd("grubby --set-default-index=0")
@@ -64,7 +64,7 @@ def run(test, params, env):
 
     guest_kernels = get_kernels_info()
     error_context.context(
-        "Set a next boot entry other than the default one and" " check it",
+        "Set a next boot entry other than the default one and check it",
         test.log.info,
     )
     next_entry = guest_kernels[1]["title"]
@@ -81,7 +81,7 @@ def run(test, params, env):
         test.fail("The next boot entry is not expected as we set")
 
     error_context.base_context(
-        "Reboot guest, check the kernel version and " "'next_entry'", test.log.info
+        "Reboot guest, check the kernel version and 'next_entry'", test.log.info
     )
     session = vm.reboot(session)
     grub_env = dict(

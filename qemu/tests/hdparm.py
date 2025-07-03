@@ -82,12 +82,12 @@ def run(test, params, env):
             ignore_count = len(re.findall(ignore_string, err.output))
             if failed_count > ignore_count:
                 test.error(
-                    "Fail to setting hard disk to lower " "performance. Output is:%s",
+                    "Fail to setting hard disk to lower performance. Output is:%s",
                     err.output,
                 )
 
         error_context.context(
-            "Checking hard disk keyval under " "lower performance settings"
+            "Checking hard disk keyval under lower performance settings"
         )
         check_setting_result(cmd, timeout)
         low_result = perform_read_timing(disk, timeout)
@@ -106,12 +106,12 @@ def run(test, params, env):
             ignore_count = len(re.findall(ignore_string, err.output))
             if failed_count > ignore_count:
                 test.error(
-                    "Fail to setting hard disk to higher " "performance. Output is:%s",
+                    "Fail to setting hard disk to higher performance. Output is:%s",
                     err.output,
                 )
 
         error_context.context(
-            "Checking hard disk keyval under " "higher performance settings"
+            "Checking hard disk keyval under higher performance settings"
         )
         check_setting_result(cmd, timeout)
         high_result = perform_read_timing(disk, timeout)

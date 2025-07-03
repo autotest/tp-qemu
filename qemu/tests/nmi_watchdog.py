@@ -29,8 +29,7 @@ def run(test, params, env):
     )
 
     error_context.context(
-        "Add 'nmi_watchdog=%d' to guest kernel "
-        "cmdline and reboot" % nmi_watchdog_type
+        "Add 'nmi_watchdog=%d' to guest kernel cmdline and reboot" % nmi_watchdog_type
     )
     session.cmd(update_kernel_cmd)
     time.sleep(int(params.get("sleep_before_reset", 10)))
@@ -44,7 +43,7 @@ def run(test, params, env):
         test.log.debug(output.strip())
         nmi_counter1 = output.split()[1:]
 
-        test.log.info("Waiting 60 seconds to see if guest's NMI counter " "increases")
+        test.log.info("Waiting 60 seconds to see if guest's NMI counter increases")
         time.sleep(60)
 
         error_context.context("Getting guest's NMI counter 2nd time")
@@ -61,6 +60,6 @@ def run(test, params, env):
                 nmi_counter2[i],
             )
             if int(nmi_counter2[i]) <= int(nmi_counter1[i]):
-                test.fail("Guest's NMI counter did not increase " "after 60 seconds")
+                test.fail("Guest's NMI counter did not increase after 60 seconds")
     finally:
         session.close()

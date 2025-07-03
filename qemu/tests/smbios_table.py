@@ -75,15 +75,14 @@ def run(test, params, env):
         params["start_vm"] = "yes"
 
         error_context.context(
-            "Boot the vm using -M option:'-M %s', smbios "
-            "para: '%s'" % (m_type, smbios),
+            "Boot the vm using -M option:'-M %s', smbios para: '%s'" % (m_type, smbios),
             test.log.info,
         )
         env_process.preprocess_vm(test, params, env, params.get("main_vm"))
         vm1 = env.get_vm(params["main_vm"])
         session = vm1.wait_for_login(timeout=login_timeout)
 
-        error_context.context("Check smbios info on guest " "is setted as expected")
+        error_context.context("Check smbios info on guest is setted as expected")
 
         for sm_type in smbios_type.split():
             if sm_type == "Bios":

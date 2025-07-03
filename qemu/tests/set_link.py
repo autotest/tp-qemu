@@ -209,14 +209,14 @@ def run(test, params, env):
         reboot_method = params.get("reboot_method", "shell")
 
         error_context.context(
-            "Reboot guest by '%s' and recheck interface " "operstate" % reboot_method,
+            "Reboot guest by '%s' and recheck interface operstate" % reboot_method,
             test.log.info,
         )
         guest_reboot(reboot_method, link_up)
         guest_interface_operstate_check(expect_status, guest_ifname, change_queues)
 
         error_context.context(
-            "Check guest network connecting after reboot " "by '%s'" % reboot_method,
+            "Check guest network connecting after reboot by '%s'" % reboot_method,
             test.log.info,
         )
         guest_netwok_connecting_check(guest_ip, link_up, change_queues)

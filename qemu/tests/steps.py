@@ -113,7 +113,7 @@ def barrier_2(
         # Make sure image is valid
         if not ppm_utils.image_verify_ppm_file(scrdump_filename):
             LOG_JOB.warning(
-                "Got invalid screendump: dimensions: %dx%d, " "data size: %d",
+                "Got invalid screendump: dimensions: %dx%d, data size: %d",
                 w,
                 h,
                 len(data),

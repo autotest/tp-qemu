@@ -71,18 +71,18 @@ class NTPTest(object):
 
         # Add server of local clock
         output = self.server_session.cmd_output(
-            "grep '^server %s'" " /etc/ntp.conf" % self.local_clock
+            "grep '^server %s' /etc/ntp.conf" % self.local_clock
         ).strip()
         if not output:
             status = self.server_session.cmd_status(
-                "echo 'server %s' >> " "/etc/ntp.conf" % self.local_clock
+                "echo 'server %s' >> /etc/ntp.conf" % self.local_clock
             )
             if status:
                 self.test.error("config local_clock failed.")
 
         # Add host and guest in restrict
         output = self.server_session.cmd_output(
-            "grep '^restrict %s'" " /etc/ntp.conf" % self.net_range
+            "grep '^restrict %s' /etc/ntp.conf" % self.net_range
         ).strip()
         if not output:
             status = self.server_session.cmd_status(

@@ -22,7 +22,7 @@ def run(test, params, env):
     session = vm.wait_for_login()
 
     error_context.context(
-        "Check if the driver is installed and " "verified", test.log.info
+        "Check if the driver is installed and verified", test.log.info
     )
     session = utils_test.qemu.windrv_check_running_verifier(
         session, vm, test, params["driver_name"]

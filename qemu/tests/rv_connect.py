@@ -219,7 +219,7 @@ def launch_rv(test, client_vm, guest_vm, params):
 
         if certdb is not None:
             LOG_JOB.debug(
-                "Remote Viewer set to use the following certificate" " database: %s",
+                "Remote Viewer set to use the following certificate database: %s",
                 certdb,
             )
             cmd += " --spice-smartcard-db " + certdb
@@ -320,9 +320,7 @@ def launch_rv(test, client_vm, guest_vm, params):
                 if "SSL_accept failed" in qemulog:
                     return
                 else:
-                    test.fail(
-                        "SSL_accept failed not shown in qemu" "process as expected."
-                    )
+                    test.fail("SSL_accept failed not shown in qemuprocess as expected.")
             is_rv_connected = False
         else:
             test.fail("remote-viewer connection failed")
@@ -341,17 +339,15 @@ def launch_rv(test, client_vm, guest_vm, params):
     # Check to see if ipv6 address is reported back from qemu monitor
     if check_spice_info == "ipv6":
         LOG_JOB.info(
-            "Test to check if ipv6 address is reported" " back from the qemu monitor"
+            "Test to check if ipv6 address is reported back from the qemu monitor"
         )
         # Remove brackets from ipv6 host ip
         if host_ip[1 : len(host_ip) - 1] in output:
-            LOG_JOB.info("Reported ipv6 address found in output from" " 'info spice'")
+            LOG_JOB.info("Reported ipv6 address found in output from 'info spice'")
         else:
-            test.fail(
-                "ipv6 address not found from qemu monitor" " command: 'info spice'"
-            )
+            test.fail("ipv6 address not found from qemu monitor command: 'info spice'")
     else:
-        LOG_JOB.info("Not checking the value of 'info spice'" " from the qemu monitor")
+        LOG_JOB.info("Not checking the value of 'info spice' from the qemu monitor")
 
     # prevent from kill remote-viewer after test finish
     if client_vm.params.get("os_type") == "linux":

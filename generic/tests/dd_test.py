@@ -168,9 +168,10 @@ def run(test, params, env):
         error_context.context("Check command exit status and output", test.log.info)
         test.log.debug("Returned dd_status: %s\nReturned output:\n%s", stat, out)
         if stat != dd_stat:
-            err = (
-                "Return code doesn't match (expected=%s, actual=%s)\n"
-                "Output:\n%s" % (dd_stat, stat, out)
+            err = "Return code doesn't match (expected=%s, actual=%s)\nOutput:\n%s" % (
+                dd_stat,
+                stat,
+                out,
             )
             test.fail(err)
         if dd_output not in out:

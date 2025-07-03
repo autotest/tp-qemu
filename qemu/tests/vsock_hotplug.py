@@ -43,7 +43,7 @@ def run(test, params, env):
         dev_vsock = qdevices.QDevice("vhost-vsock-pci", vsock_params)
     vm.devices.simple_hotplug(dev_vsock, vm.monitor)
     error_context.context(
-        "Check vsock device exist in guest lspci and " "dmesg output.", test.log.info
+        "Check vsock device exist in guest lspci and dmesg output.", test.log.info
     )
     addr_pattern = params["addr_pattern"]
     device_pattern = params["device_pattern"]

@@ -26,7 +26,7 @@ class BlockStreamNegative(blk_stream.BlockStream):
         args = {"device": self.device, "speed": expected_speed}
         response = str(self.vm.monitor.cmd_qmp("block-job-set-speed", args))
         if "(core dump)" in response:
-            self.test.fail("Qemu core dump when reset " "speed to a negative value.")
+            self.test.fail("Qemu core dump when reset speed to a negative value.")
         if match_str not in response:
             self.test.fail(
                 "Fail to get expected result. %s is expected in %s"

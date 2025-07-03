@@ -29,8 +29,7 @@ class BlockdevCommitFilter(BlockDevCommitTest):
         block_info = self.main_vm.monitor.info_block()
         if filter_node_name in block_info:
             self.test.fail(
-                "Block info not correct,node-name should not"
-                "be '%s'" % filter_node_name
+                "Block info not correct,node-name should notbe '%s'" % filter_node_name
             )
 
 

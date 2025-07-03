@@ -49,7 +49,7 @@ def run(test, params, env):
 
     try:
         error_context.context(
-            "Open sigverif logs and check driver signature" " status", test.log.info
+            "Open sigverif logs and check driver signature status", test.log.info
         )
         output = session.cmd_output(check_sigverif_cmd)
         pattern = r"%s.sys.*\s{2,}Signed" % driver_name

@@ -116,7 +116,7 @@ def uninstall_driver(session, test, devcon_path, driver_name, device_name, devic
     # acceptable status: OK(0), REBOOT(1)
     if status > 1:
         test.error(
-            "Failed to uninstall driver '%s', details:\n" "%s" % (driver_name, output)
+            "Failed to uninstall driver '%s', details:\n%s" % (driver_name, output)
         )
 
 
@@ -187,11 +187,11 @@ def install_driver_by_virtio_media(
         # acceptable status: OK(0), REBOOT(1)
         if status > 1:
             test.fail(
-                "Failed to install driver '%s', " "details:\n%s" % (driver_name, output)
+                "Failed to install driver '%s', details:\n%s" % (driver_name, output)
             )
         installed_any |= True
     if not installed_any:
-        test.error("Failed to find target devices " "by hwids: '%s'" % device_hwid)
+        test.error("Failed to find target devices by hwids: '%s'" % device_hwid)
 
 
 def autoit_installer_check(params, session):
@@ -248,15 +248,14 @@ def run_installer(vm, session, test, params, run_installer_cmd):
     if not utils_misc.wait_for(
         lambda: not autoit_installer_check(params, session), 240, 2, 2
     ):
-        test.fail("Autoit exe stop there for 240s," " please have a check.")
+        test.fail("Autoit exe stop there for 240s, please have a check.")
     restart_con_ver = cdrom_virtio_version in VersionInterval(installer_restart_version)
     restart_con_repair = "repair" in run_installer_cmd
     if restart_con_ver or restart_con_repair:
         # Wait for vm re-start by installer itself
         if not utils_misc.wait_for(lambda: not session.is_responsive(), 120, 5, 5):
             test.fail(
-                "The previous session still exists,"
-                "seems that the vm doesn't restart."
+                "The previous session still exists,seems that the vm doesn't restart."
             )
         session = vm.wait_for_login(timeout=360)
     # for the early virtio-win instller, rebooting is needed.
@@ -294,9 +293,7 @@ def copy_file_to_samepath(session, test, params):
     :param test: kvm test object
     :param params: the dict used for parameters
     """
-    LOG_JOB.info(
-        "Copy autoit scripts and virtio-win-guest-tools.exe " "to the same path."
-    )
+    LOG_JOB.info("Copy autoit scripts and virtio-win-guest-tools.exe to the same path.")
     dst_path = r"C:\\"
     vol_virtio_key = "VolumeName like '%virtio-win%'"
     vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
@@ -328,7 +325,7 @@ def copy_file_to_samepath(session, test, params):
         copy_cmd = "xcopy %s %s /Y" % (src_file, dst_path)
         status, output = session.cmd_status_output(copy_cmd)
         if status != 0:
-            test.error("Copy file error," " the detailed info:\n%s." % output)
+            test.error("Copy file error, the detailed info:\n%s." % output)
 
 
 def enable_driver(session, test, cmd):
@@ -453,8 +450,7 @@ def memory_leak_check(vm, test, params, load_method="enable"):
     time.sleep(10)
     if vm.is_alive() is False:
         test.fail(
-            "VM is not alive after uninstall driver,"
-            "please check if it is a memory leak"
+            "VM is not alive after uninstall driver,please check if it is a memory leak"
         )
     if load_method != "enable":
         session = vm.reboot(session)

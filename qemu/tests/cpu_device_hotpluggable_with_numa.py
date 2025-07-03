@@ -109,7 +109,7 @@ def run(test, params, env):
                         "Current guest numa info:\n%s", session.cmd_output("numactl -H")
                     )
                     test.fail(
-                        "The cpu obtained by guest is inconsistent with " "we assigned."
+                        "The cpu obtained by guest is inconsistent with we assigned."
                     )
             except KeyError:
                 test.error("Could not find node %s in guest." % node_id)

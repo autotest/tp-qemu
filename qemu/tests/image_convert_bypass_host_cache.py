@@ -52,7 +52,7 @@ def run(test, params, env):
     )
     image_params["convert_target"] = convert_target2
     test.log.debug(
-        ("Convert image from %s to %s with cache mode " "'none', strace log: %s"),
+        ("Convert image from %s to %s with cache mode 'none', strace log: %s"),
         image.tag,
         convert_target2,
         strace_output_file,

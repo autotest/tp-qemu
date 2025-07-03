@@ -157,7 +157,7 @@ def run(test, params, env):
         gagent.gagent.set_time()
 
         error_context.context(
-            "Execute 'rtc-reset-reinjection' in qmp" " monitor, not for power platform",
+            "Execute 'rtc-reset-reinjection' in qmp monitor, not for power platform",
             test.log.info,
         )
         if arch.ARCH not in ("ppc64", "ppc64le"):

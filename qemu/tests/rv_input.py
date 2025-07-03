@@ -443,6 +443,6 @@ def run(test, params, env):
     # do not match with expected keycodes
     result = analyze_results(result_path, test_type)
     if result is not None:
-        test.fail("Testing of sending keys failed:" "  Expected keycode = %s" % result)
+        test.fail("Testing of sending keys failed:  Expected keycode = %s" % result)
 
     guest_session.close()

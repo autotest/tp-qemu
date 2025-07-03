@@ -56,7 +56,7 @@ def run(test, params, env):
     utils_package.package_install("trace-cmd")
     if params.get("ovmf_log"):
         error_context.context(
-            "Append debugcon parameter to " "qemu command lines.", test.log.info
+            "Append debugcon parameter to qemu command lines.", test.log.info
         )
         ovmf_log = utils_misc.get_path(test.debugdir, params["ovmf_log"])
         params["extra_params"] %= ovmf_log

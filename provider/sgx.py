@@ -81,7 +81,7 @@ class SGXHostCapability(object):
         monitor_expect_nodes = int(self._params["monitor_expect_nodes"])
         if len(node_list) < monitor_expect_nodes:
             self._test.cancel(
-                "host numa nodes %s isn't enough for " "testing." % node_list
+                "host numa nodes %s isn't enough for testing." % node_list
             )
 
 
@@ -179,7 +179,7 @@ class SGXChecker(object):
         numa_epc_dict = self.get_config_epc_numa_info()
         if numa_epc_dict == epc_sections_info:
             self._test.fail(
-                "Guest epc sized on each numa mis-matched, " "qmp check failed."
+                "Guest epc sized on each numa mis-matched, qmp check failed."
             )
 
         sgx_sections = guest_sgx_info["sections"]

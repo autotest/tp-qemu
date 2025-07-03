@@ -94,8 +94,7 @@ def run(test, params, env):
                 " filling its memory."
             )
             fail_msg = (
-                "Could not determine the transferred memory from"
-                " monitor data: %s" % o
+                "Could not determine the transferred memory from monitor data: %s" % o
             )
             if isinstance(o, six.string_types):
                 if "status: active" not in o:

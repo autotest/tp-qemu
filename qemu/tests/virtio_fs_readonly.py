@@ -36,7 +36,7 @@ def run(test, params, env):
 
     try:
         error_context.context(
-            "Create file under the destination " "directory inside guest.",
+            "Create file under the destination directory inside guest.",
             test.log.info,
         )
         output = session.cmd_output(params.get("cmd_create_file"))

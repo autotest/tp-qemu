@@ -64,7 +64,7 @@ class BlockCommitStress(blk_commit.BlockCommit):
         backingfile = self.get_backingfile("monitor")
         if backingfile:
             self.test.log.info(
-                "Got backing-file: #%s# by 'info/query block' in #%s# " "monitor",
+                "Got backing-file: #%s# by 'info/query block' in #%s# monitor",
                 backingfile,
                 self.vm.monitor.protocol,
             )

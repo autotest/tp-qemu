@@ -313,4 +313,4 @@ def run(test, params, env):
             session = vm.wait_for_serial_login(timeout=login_timeout)
             ethtool_restore_params(session, pretest_status)
         except Exception as detail:
-            test.log.warning("Could not restore parameter of" " eth card: '%s'", detail)
+            test.log.warning("Could not restore parameter of eth card: '%s'", detail)

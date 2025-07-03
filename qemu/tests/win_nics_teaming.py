@@ -105,7 +105,7 @@ def run(test, params, env):
         current_md5 = crypto.hash_file(host_path, algorithm="md5")
         test.log.info("md5 value of data current: %s", current_md5)
         if original_md5 != current_md5:
-            test.fail("File changed after transfer host -> guest " "and guest -> host")
+            test.fail("File changed after transfer host -> guest and guest -> host")
     finally:
         os.remove(host_path)
         session_serial.cmd(

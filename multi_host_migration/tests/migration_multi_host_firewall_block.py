@@ -55,7 +55,7 @@ def run(test, params, env):
             mig_finished, timeout, 2, 2, "Waiting for migration to complete"
         ):
             raise virt_vm.VMMigrateTimeoutError(
-                "Timeout expired while waiting " "for migration to finish"
+                "Timeout expired while waiting for migration to finish"
             )
 
     class TestMultihostMigrationLongWait(base_class):
@@ -73,7 +73,7 @@ def run(test, params, env):
 
         def firewall_block_port(self, port):
             utils.run(
-                "iptables -A INPUT -p tcp --dport %s" " -j REJECT" % (port),
+                "iptables -A INPUT -p tcp --dport %s -j REJECT" % (port),
                 ignore_status=True,
             )
 
@@ -179,7 +179,7 @@ def run(test, params, env):
                     vm.resume()
                     if utils_test.qemu.guest_active(vm):
                         raise error.TestFail(
-                            "Guest can't be active after" " interrupted migration."
+                            "Guest can't be active after interrupted migration."
                         )
                 except (
                     qemu_monitor.MonitorProtocolError,

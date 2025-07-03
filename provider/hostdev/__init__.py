@@ -38,9 +38,7 @@ class HostDeviceBindError(HostDeviceError):
         self.error = error
 
     def __str__(self):
-        return (
-            f'Cannot bind "{self.slot_id}" to driver "{self.driver}": ' f"{self.error}"
-        )
+        return f'Cannot bind "{self.slot_id}" to driver "{self.driver}": {self.error}'
 
 
 class HostDeviceUnbindError(HostDeviceBindError):
@@ -49,8 +47,7 @@ class HostDeviceUnbindError(HostDeviceBindError):
 
     def __str__(self):
         return (
-            f'Cannot unbind "{self.slot_id}" from driver "{self.driver}": '
-            f"{self.error}"
+            f'Cannot unbind "{self.slot_id}" from driver "{self.driver}": {self.error}'
         )
 
 
@@ -143,7 +140,7 @@ class PFDevice:
                 override_file.write_text(driver)
             except OSError as e:
                 raise HostDeviceError(
-                    f"Failed to set the driver " f"override for {slot_id}:  {str(e)}"
+                    f"Failed to set the driver override for {slot_id}:  {str(e)}"
                 )
         # For kernels < 3.15 use new_id to add PCI id's to the driver
         else:
@@ -279,7 +276,7 @@ class VFDevice(PFDevice):
             if counts > int((self.slot_path / "sriov_totalvfs").read_text().strip()):
                 raise VFCreateError(
                     self.slot_id,
-                    "Count of VF to be created is " 'larger than "sriov_totalvfs"',
+                    'Count of VF to be created is larger than "sriov_totalvfs"',
                 )
             self.num_vfs = int(self.sriov_numvfs_path.read_text().strip())
             with self.sriov_numvfs_path.open("w") as numvfs_f:

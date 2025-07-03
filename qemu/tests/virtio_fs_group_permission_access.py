@@ -57,7 +57,7 @@ def run(test, params, env):
                             " pls check on your host."
                         )
                     else:
-                        test.fail("Unknown error when deleting the " "user: %s" % o)
+                        test.fail("Unknown error when deleting the user: %s" % o)
             if (
                 process.system(
                     "grep %s /etc/group" % _username, shell=True, ignore_status=True
@@ -125,14 +125,13 @@ def run(test, params, env):
             virtio_fs_utils.run_viofs_service(test, params, guest_session)
         else:
             error_context.context(
-                "Create a destination directory %s " "inside guest." % fs_dest,
+                "Create a destination directory %s inside guest." % fs_dest,
                 test.log.info,
             )
             if not utils_misc.make_dirs(fs_dest, session=guest_session):
                 test.fail("Creating directory was failed!")
             error_context.context(
-                "Mount virtiofs target %s to %s inside"
-                " guest." % (fs_target, fs_dest),
+                "Mount virtiofs target %s to %s inside guest." % (fs_target, fs_dest),
                 test.log.info,
             )
             if not utils_disk.mount(

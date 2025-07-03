@@ -194,8 +194,7 @@ def run(test, params, env):
         else:
             if match != 1:  # Multiple open didn't fail:
                 test.fail(
-                    "Unexpended pass of opening the"
-                    " serialport device for the 2nd time."
+                    "Unexpended pass of opening the serialport device for the 2nd time."
                 )
         port.open()
         virtio_test.cleanup(vm, guest_worker)
@@ -372,7 +371,7 @@ def run(test, params, env):
         port.close()
         guest_worker.cmd("virt.clean_port('%s'),1024" % port.name, 10)
         match, tmp = guest_worker._cmd(
-            "virt.send('%s', (1024**3)*3, True, " "is_static=True)" % port.name, 30
+            "virt.send('%s', (1024**3)*3, True, is_static=True)" % port.name, 30
         )
         if match is not None:
             test.fail(
@@ -391,7 +390,7 @@ def run(test, params, env):
                 rlen += len(port.sock.recv((4096)))
             elif rlen != (1024**3 * 3):
                 test.fail(
-                    "Not all data was received," "only %d from %d" % (rlen, 1024**3 * 3)
+                    "Not all data was received,only %d from %d" % (rlen, 1024**3 * 3)
                 )
         guest_worker.cmd("print('PASS: nothing')", 10)
         virtio_test.cleanup(vm, guest_worker)
@@ -413,7 +412,7 @@ def run(test, params, env):
             "virt.recv('%s', 10, 1024, False)" % port.name, 10
         )
         if match == 0:
-            test.fail("Received data even when none was sent\n" "Data:\n%s" % tmp)
+            test.fail("Received data even when none was sent\nData:\n%s" % tmp)
         elif match is not None:
             test.fail("Unexpected fail\nMatch: %s\nData:\n%s" % (match, tmp))
         port.sock.sendall(b"1234567890")
@@ -438,9 +437,9 @@ def run(test, params, env):
             "virt.recv('%s', 10, 1024, False)" % port.name, 10
         )
         if match == 0:
-            test.fail("Received data even when none was sent\n" "Data:\n%s" % tmp)
+            test.fail("Received data even when none was sent\nData:\n%s" % tmp)
         elif match is None:
-            test.fail("Timed out, probably in blocking mode\n" "Data:\n%s" % tmp)
+            test.fail("Timed out, probably in blocking mode\nData:\n%s" % tmp)
         elif match != 1:
             test.fail("Unexpected fail\nMatch: %s\nData:\n%s" % (match, tmp))
         port.sock.sendall(b"1234567890")
@@ -626,7 +625,7 @@ def run(test, params, env):
                 transferred = _transfered
                 if err:
                     test.log.error(
-                        "Error occurred while executing loopback " "(%d out of %ds)",
+                        "Error occurred while executing loopback (%d out of %ds)",
                         test_time - int(end_time - time.time()),
                         test_time,
                     )
@@ -991,9 +990,7 @@ def run(test, params, env):
             send_resume_ev = threading.Event()
             recv_resume_ev = threading.Event()
         else:
-            test.cancel(
-                "virtio_console_interruption = '%s' " "is unknown." % interruption
-            )
+            test.cancel("virtio_console_interruption = '%s' is unknown." % interruption)
 
         send_pt = ports[0]
         recv_pt = ports[1]
@@ -1071,7 +1068,7 @@ def run(test, params, env):
                     test.log.debug("Transfered data2: %s", threads[1].idx)
                     if count == threads[1].idx and threads[1].is_alive():
                         test.log.warning(
-                            "No data received after %ds, extending " "test_time",
+                            "No data received after %ds, extending test_time",
                             test_time,
                         )
                     else:
@@ -1256,7 +1253,7 @@ def run(test, params, env):
                 if thread.ret_code:
                     no_errors += 1
                     test.log.error(
-                        "test_perf: error occurred in thread %s " "(H2G)", thread
+                        "test_perf: error occurred in thread %s (H2G)", thread
                     )
                 elif thread.idx == 0:
                     no_errors += 1
@@ -1270,13 +1267,13 @@ def run(test, params, env):
                         break
                     time.sleep(1)
                 else:
-                    test.fail("Unable to read-out all remaining " "data in 60s.")
+                    test.fail("Unable to read-out all remaining data in 60s.")
 
                 guest_worker.safe_exit_loopback_threads([port], [])
 
                 if _time > time_slice:
                     test.log.error(
-                        "Test ran %fs longer which is more than one " "time slice",
+                        "Test ran %fs longer which is more than one time slice",
                         _time,
                     )
                 else:
@@ -1284,7 +1281,7 @@ def run(test, params, env):
                 stats = _process_stats(stats[1:], time_slice * 1048576)
                 test.log.debug("Stats = %s", stats)
                 test.log.info(
-                    "Host -> Guest [MB/s] (min/med/max) = %.3f/%.3f/" "%.3f",
+                    "Host -> Guest [MB/s] (min/med/max) = %.3f/%.3f/%.3f",
                     stats[0],
                     stats[len(stats) / 2],
                     stats[-1],
@@ -1315,7 +1312,7 @@ def run(test, params, env):
                 if thread.ret_code:
                     no_errors += 1
                     test.log.error(
-                        "test_perf: error occurred in thread %s" "(G2H)", thread
+                        "test_perf: error occurred in thread %s(G2H)", thread
                     )
                 elif thread.idx == 0:
                     no_errors += 1
@@ -1323,7 +1320,7 @@ def run(test, params, env):
                 # Deviation is higher than single time_slice
                 if _time > time_slice:
                     test.log.error(
-                        "Test ran %fs longer which is more than one " "time slice",
+                        "Test ran %fs longer which is more than one time slice",
                         _time,
                     )
                 else:
@@ -1331,7 +1328,7 @@ def run(test, params, env):
                 stats = _process_stats(stats[1:], time_slice * 1048576)
                 test.log.debug("Stats = %s", stats)
                 test.log.info(
-                    "Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/" "%.3f",
+                    "Guest -> Host [MB/s] (min/med/max) = %.3f/%.3f/%.3f",
                     stats[0],
                     stats[len(stats) / 2],
                     stats[-1],
@@ -1481,9 +1478,7 @@ def run(test, params, env):
                     )
                 else:
                     EXIT_EVENT.set()
-                    test.fail(
-                        "Send thread died unexpectedly in " "migration %d" % (j + 1)
-                    )
+                    test.fail("Send thread died unexpectedly in migration %d" % (j + 1))
             for i in range(0, len(ports[1:])):
                 if not threads[i + 1].is_alive():
                     EXIT_EVENT.set()
@@ -1529,7 +1524,7 @@ def run(test, params, env):
             if thread.ret_code:
                 err += "%s, " % thread
         test.log.info(
-            "test_migrate: %s data received and verified during %d " "migrations",
+            "test_migrate: %s data received and verified during %d migrations",
             tmp[:-2],
             no_migrations,
         )
@@ -1604,7 +1599,7 @@ def run(test, params, env):
         for key, value in {
             "id": port,
             "name": port,
-            "bus": "virtio_serial_pci" "%d.0" % pci_id,
+            "bus": "virtio_serial_pci%d.0" % pci_id,
         }.items():
             new_portdev.set_param(key, value)
         (result, ver_out) = vm.devices.simple_hotplug(new_portdev, vm.monitor)
@@ -1851,8 +1846,7 @@ def run(test, params, env):
             raise inst
         if sent1 != sent2:
             test.log.warning(
-                "Inconsistent behavior: First sent %d bytes and "
-                "second sent %d bytes",
+                "Inconsistent behavior: First sent %d bytes and second sent %d bytes",
                 sent1,
                 sent2,
             )
@@ -1937,9 +1931,7 @@ def run(test, params, env):
             guest_worker.cmd("virt.open('%s')" % (port.name), 2)
             try:
                 process.append(
-                    Popen(
-                        "dd if=/dev/random of='%s' bs=4096 " "&>/dev/null &" % port.path
-                    )
+                    Popen("dd if=/dev/random of='%s' bs=4096 &>/dev/null &" % port.path)
                 )
             except Exception:
                 pass

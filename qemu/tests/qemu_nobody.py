@@ -1,7 +1,9 @@
 import re
 
 from avocado.utils import process
-from virttest import env_process, error_context
+from virttest import env_process, error_context, utils_misc, utils_qemu
+from virttest.utils_version import VersionInterval
+
 
 try:
     cmp
@@ -52,8 +54,14 @@ def run(test, params, env):
 
     error_context.context("Run the qemu as user '%s'" % exec_username)
     test.log.info("The user %s :uid='%s', gid='%s'", exec_username, exec_uid, exec_gid)
+    qemu_binary = utils_misc.get_qemu_binary(params)
+    qemu_version = utils_qemu.get_qemu_version(qemu_binary)[0]
+    required_qemu_version = params["required_qemu"]
+    if qemu_version in VersionInterval(required_qemu_version):
+        params["extra_params"] = " -run-with user=%s" % exec_username
+    else:
+        params["extra_params"] = " -runas %s" % exec_username
 
-    params["extra_params"] = " -runas %s" % exec_username
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])

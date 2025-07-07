@@ -72,15 +72,18 @@ def run(test, params, env):
             test.fail("Vmcore corrupt")
 
     # install crash/gdb/kernel-debuginfo in host
-    packages = [
-        "crash",
-        "gdb",
-        "kernel-debuginfo*",
-        "qemu-kvm-debuginfo",
-        "qemu-kvm-debugsource",
-        "qemu-kvm-core-debuginfo",
+    utils_package.package_install(["crash", "gdb"])
+
+    debuginfo_pkgs = [
+        "kernel",
+        "qemu-kvm",
+        "qemu-kvm-core",
     ]
-    utils_package.package_install(packages)
+    cmd = "dnf debuginfo-install -y %s" % " ".join(debuginfo_pkgs)
+    try:
+        process.run(cmd, timeout=900, shell=True)
+    except (process.CmdError, process.TimeoutError) as e:
+        test.fail("Failed to install debuginfo packages: %s" % e)
 
     trigger_core_dump_command = params["trigger_core_dump_command"]
     core_file = params["core_file"]

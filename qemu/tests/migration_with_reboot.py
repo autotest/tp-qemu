@@ -48,15 +48,22 @@ def run(test, params, env):
         bg = utils_misc.InterruptedThread(
             vm.reboot, kwargs={"session": session, "timeout": login_timeout}
         )
+        bg.daemon = True
         bg.start()
         try:
+            cnt = 0
             while bg.is_alive():
                 for func in pre_migrate:
                     func(vm, params, test)
+                if cnt % 2 == 0:
+                    dest_host = params.get("mig_dest_node")
+                else:
+                    dest_host = params.get("vm_node")
                 vm.migrate(
                     mig_timeout,
                     mig_protocol,
                     mig_cancel_delay,
+                    dest_host=dest_host,
                     env=env,
                     migration_exec_cmd_src=migration_exec_cmd_src,
                     migration_exec_cmd_dst=migration_exec_cmd_dst,
@@ -64,6 +71,7 @@ def run(test, params, env):
                 # run some functions after migrate finish.
                 for func in post_migrate:
                     func(vm, params, test)
+                cnt += 1
         except Exception:
             # If something bad happened in the main thread, ignore exceptions
             # raised in the background thread

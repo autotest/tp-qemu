@@ -131,7 +131,8 @@ def run(test, params, env):
         set_link(nic_name, up=True)
 
     error_context.context("Migrate from source VM to Destination VM", test.log.info)
-    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, env=env)
+    dst_node = params.get("mig_dest_node")
+    vm.migrate(mig_timeout, mig_protocol, mig_cancel_delay, dest_host=dst_node, env=env)
 
     if with_unplug:
         error_context.context(

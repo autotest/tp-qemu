@@ -683,11 +683,22 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
         old_password = params.get("password", "")
         new_password = params.get("new_password", "123456")
         ga_username = params.get("ga_username", "root")
         crypted = params.get("crypted", "") == "yes"
-        error_context.context("Change guest's password.")
+        error_context.context(
+            "Check if openssl exists and install it if not.", LOG_JOB.info
+        )
+        s, o = session.cmd_status_output(params["cmd_check_openssl"])
+        if s:
+            session.cmd(params["cmd_install_openssl"])
+
+        error_context.context("Change guest's password.", LOG_JOB.info)
         try:
             self.gagent.set_user_password(new_password, crypted, ga_username)
             error_context.context(

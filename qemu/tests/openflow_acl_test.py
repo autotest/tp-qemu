@@ -77,6 +77,9 @@ def run(test, params, env):
                             access_cmd, target_ip, remote_src, params, host_ip
                         )
                         stat = 0
+                        expect_string = params.get("ssh_connect_expect_string")
+                        if expect_string in str(out):
+                            stat = 1
                     except remote.LoginError as err:
                         stat = 1
                         out_err = "Failed to login %s " % atgt

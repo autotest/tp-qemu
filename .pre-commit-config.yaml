@@ -1,3 +1,7 @@
+ci:
+  autofix_prs: true
+  autoupdate_schedule: weekly
+  skip: [no-commit-to-branch]
 default_stages: [pre-commit, pre-push]
 exclude: "qemu/deps/cpuid/cpuid_dumps/kvm"
 repos:

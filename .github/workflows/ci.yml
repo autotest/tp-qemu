@@ -32,6 +32,8 @@ jobs:
   commitlint:
     name: Commitlint
     runs-on: ubuntu-24.04
+    # Skip if it's a PR from a bot account
+    if: github.event.pull_request.user.type != 'Bot'
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4

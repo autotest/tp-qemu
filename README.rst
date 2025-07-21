@@ -47,3 +47,11 @@ using virt test, and commit your changes.
 8) That's it.
 
 [1] You can always create your own test provider, if you have special purposes, or just want to develop your work independently.
+
+AI-Generated code policy
+========================
+The tp-qemu project allows the use of AI-generated code, but it has to follow
+the guidelines and requirements outlined in the Policy for AI-Generated Code
+which can be found at:
+
+https://avocado-framework.readthedocs.io/en/latest/guides/contributor/chapters/ai_policy.html

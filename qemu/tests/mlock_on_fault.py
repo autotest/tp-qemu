@@ -24,6 +24,7 @@ def run(test, params, env):
 
     qemu_path = utils_misc.get_qemu_binary(params)
     memhog_cmd = params.get("memhog_cmd")
+    threshold = params.get_numeric("threshold")
     rss_values = []
 
     for status in ["on", "on-fault"]:
@@ -69,31 +70,31 @@ def run(test, params, env):
     )
     test.log.info("The qemu-kvm command: %s", qemu_cmd_memhog)
 
-    try:
-        with aexpect.run_bg(qemu_cmd_memhog) as _:
-            qemu_pid = process.get_children_pids(_.get_pid())[0]
-            rss_cmd = "ps -p %s -o rss=" % qemu_pid
-            time.sleep(5)
-            previous_rss_value = int(process.getoutput(rss_cmd, shell=True))
+    with aexpect.run_bg(qemu_cmd_memhog) as _:
+        qemu_pid = process.get_children_pids(_.get_pid())[0]
+        rss_cmd = "ps -p %s -o rss=" % qemu_pid
+        time.sleep(5)
+        previous_rss_value = int(process.getoutput(rss_cmd, shell=True))
 
-            # Calculates a suitable amount of memory for memhog
-            swap_free = str(swap_free) + "K"
-            swap_normalized = math.ceil(
-                float(utils_misc.normalize_data_size(swap_free, "G"))
-            )
-            memhog_value = math.ceil(vm_memory_normalized + (swap_normalized * 1.25))
-            memhog_cmd = memhog_cmd % memhog_value
-            memhog_cmd = aexpect.run_bg(memhog_cmd)
+        # Calculates a suitable amount of memory for memhog
+        swap_free = str(swap_free) + "K"
+        swap_normalized = math.ceil(
+            float(utils_misc.normalize_data_size(swap_free, "G"))
+        )
+        memhog_value = math.ceil(vm_memory_normalized + (swap_normalized * 1.25))
+        memhog_cmd = memhog_cmd % memhog_value
+        memhog_cmd = aexpect.run_bg(memhog_cmd)
 
-            while memhog_cmd.is_alive():
-                rss_value = int(process.getoutput(rss_cmd, shell=True))
-                if rss_value < previous_rss_value:
-                    test.log.debug(
-                        "previous_rss_value: %d and the rss_value: %d",
-                        previous_rss_value,
-                        rss_value,
-                    )
-                    test.error("The RSS value has decreased, memory is not locked!")
-                previous_rss_value = rss_value
-    except Exception as e:
-        test.error("An error ocurred: %s" % str(e))
+        while memhog_cmd.is_alive():
+            rss_value = int(process.getoutput(rss_cmd, shell=True))
+            if (
+                rss_value < previous_rss_value
+                and (previous_rss_value - rss_value) >= threshold
+            ):
+                test.log.debug(
+                    "previous_rss_value: %d and the rss_value: %d",
+                    previous_rss_value,
+                    rss_value,
+                )
+                test.error("The RSS value has decreased, memory is not locked!")
+            previous_rss_value = rss_value

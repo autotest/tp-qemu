@@ -1043,6 +1043,7 @@ def run(test, params, env):
                     error_context.context(
                         "Reboot guest and check virtiofs daemon.", test.log.info
                     )
+                    session.cmd("sync")
                     session = vm.reboot(session, reboot_method)
                     if not vm.is_alive():
                         test.fail("After rebooting vm quit unexpectedly.")

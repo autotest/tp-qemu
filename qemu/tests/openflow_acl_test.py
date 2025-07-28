@@ -73,21 +73,18 @@ def run(test, params, env):
                     out = ""
                     out_err = ""
                     try:
-                        out = remote_login(
+                        stat, out = verify_port_reachable(
                             access_cmd, target_ip, remote_src, params, host_ip
                         )
-                        stat = 0
                     except remote.LoginError as err:
-                        stat = 1
                         out_err = "Failed to login %s " % atgt
                         out_err += "from %s, err: %s" % (asys, err.output)
                     if "TelnetServer" in params.get("setup_cmd_windows", ""):
                         try:
-                            out += remote_login(
+                            stat, out = verify_port_reachable(
                                 access_cmd, ssh_src_ip, target_vm, params, host_ip
                             )
                         except remote.LoginError as err:
-                            stat += 1
                             out_err += "Failed to login %s " % asys
                             out_err += "from %s, err: %s" % (atgt, err.output)
                     if out_err:
@@ -183,7 +180,7 @@ def run(test, params, env):
                 return True
         return False
 
-    def remote_login(client, host, src, params_login, host_ip):
+    def verify_port_reachable(client, host, src, params_login, host_ip):
         src_name = src
         if src != "localhost":
             src_name = src.name
@@ -192,24 +189,15 @@ def run(test, params, env):
         username = params_login["username"]
         password = params_login["password"]
         prompt = params_login["shell_prompt"]
-        linesep = eval("'%s'" % params_login.get("shell_linesep", r"\n"))
-        quit_cmd = params.get("quit_cmd", "exit")
         if host == host_ip:
             # Try to login from guest to host.
             prompt = r"^\[.*\][\#\$]\s*$"
-            linesep = "\n"
             username = params_login["host_username"]
             password = params_login["host_password"]
-            quit_cmd = "exit"
 
         if client == "ssh":
             # We only support ssh for Linux in this test
-            cmd = (
-                "ssh -o UserKnownHostsFile=/dev/null "
-                "-o StrictHostKeyChecking=no "
-                "-o PreferredAuthentications=password -p %s %s@%s"
-                % (port, username, host)
-            )
+            cmd = "socat -u -T 1 TCP:%s:%s -" % (host, port)
         elif client == "telnet":
             cmd = "telnet -l %s %s %s" % (username, host, port)
         else:
@@ -217,7 +205,7 @@ def run(test, params, env):
 
         if src == "localhost":
             test.log.debug("Login with command %s", cmd)
-            session = aexpect.ShellSession(cmd, linesep=linesep, prompt=prompt)
+            stat, out = process.getstatusoutput(cmd)
         else:
             if params_login.get("os_type") == "windows":
                 if client == "telnet":
@@ -225,24 +213,10 @@ def run(test, params, env):
                     cmd += '%s "%s" && ' % (password, prompt)
                     cmd += "C:\\wait_for_quit.py"
                 cmd = "%s || ping 127.0.0.1 -n 5 -w 1000 > nul" % cmd
-            else:
-                cmd += " || sleep 5"
             session = src.wait_for_login()
             test.log.debug("Sending login command: %s", cmd)
-            session.sendline(cmd)
-        try:
-            out = remote.handle_prompts(
-                session, username, password, prompt, timeout, debug=True
-            )
-        except Exception as err:
-            session.close()
-            raise err
-        try:
-            session.cmd(quit_cmd)
-            session.close()
-        except Exception:
-            pass
-        return out
+            stat, out = session.cmd_status_output(cmd, timeout=240)
+        return stat, out
 
     def setup_service(setup_target):
         setup_timeout = int(params.get("setup_timeout", 360))

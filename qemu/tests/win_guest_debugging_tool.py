@@ -7,7 +7,6 @@ from distutils.util import strtobool
 from aexpect.exceptions import ShellTimeoutError
 from virttest import (
     error_context,
-    utils_misc,
 )
 
 LOG_JOB = logging.getLogger("avocado.test")
@@ -130,8 +129,7 @@ class WinDebugToolTest(BaseVirtTest):
                 )
 
             error_context.context(
-                "Create tmp work dir since testing "
-                "would create lots of dir and files.",
+                "Create tmp work dir since testing would create lots of dir and files.",
                 LOG_JOB.info,
             )
             session.cmd_output(params["cmd_create_dir"] % self.tmp_dir)
@@ -704,8 +702,7 @@ class WinDebugToolTestBasicCheck(WinDebugToolTest):
         print("new_jp_value: %s" % new_jp_value)
         if original_jp_value_from_file == new_jp_value:
             test.fail(
-                "Jumbo Packet should not be same with the original one,"
-                "Please check it."
+                "Jumbo Packet should not be same with the original one,Please check it."
             )
         if new_jp_value != 9014:
             test.error(
@@ -792,6 +789,7 @@ class WinDebugToolTestBasicCheck(WinDebugToolTest):
         2. Start a background IO task and run script during the task
         3. Compare the two IO metrics files and verify values increased
         """
+
         def _run_continuous_io(session, stop_event):
             """Helper function to continuously create and delete files"""
             i = 0
@@ -811,7 +809,9 @@ class WinDebugToolTestBasicCheck(WinDebugToolTest):
         self._open_session_list.extend([session, session1])
         session.cmd("cd %s" % self.tmp_dir)
 
-        error_context.context("Run script first time to collect baseline IO metrics", LOG_JOB.info)
+        error_context.context(
+            "Run script first time to collect baseline IO metrics", LOG_JOB.info
+        )
         first_log_path = self.run_tool_scripts(session)
 
         # Get first IO limits file
@@ -826,14 +826,18 @@ class WinDebugToolTestBasicCheck(WinDebugToolTest):
         for line in first_output.splitlines():
             if "Disk" in line and ":" in line:
                 key = line.split(":")[1].strip()
-                value = float(line.split(":")[2].strip().split()[0].replace(',', ''))
+                value = float(line.split(":")[2].strip().split()[0].replace(",", ""))
                 first_metrics[key] = value
 
-        error_context.context("Run script second time with continuous IO in background", LOG_JOB.info)
+        error_context.context(
+            "Run script second time with continuous IO in background", LOG_JOB.info
+        )
 
         # Start continuous IO in background
         stop_event = threading.Event()
-        io_thread = threading.Thread(target=_run_continuous_io, args=(session1, stop_event))
+        io_thread = threading.Thread(
+            target=_run_continuous_io, args=(session1, stop_event)
+        )
         io_thread.start()
 
         # Wait briefly for IO to start
@@ -852,19 +856,20 @@ class WinDebugToolTestBasicCheck(WinDebugToolTest):
         second_io_file = session.cmd_output(cmd_get_io).strip()
         if not second_io_file:
             test.error("Cannot find IO limits file in %s" % second_log_path)
-        
+
         # Read second IO metrics and compare
         second_output = session.cmd_output(params["cmd_cat_io"] % second_io_file)
         any_increased = False
         for line in second_output.splitlines():
             if "Disk" in line and ":" in line:
                 key = line.split(":")[1].strip()
-                value = float(line.split(":")[2].strip().split()[0].replace(',', ''))
+                value = float(line.split(":")[2].strip().split()[0].replace(",", ""))
                 if key in first_metrics:
                     if value > first_metrics[key]:
                         any_increased = True
-                        LOG_JOB.info("%s increased from %f to %f",
-                                   key, first_metrics[key], value)
+                        LOG_JOB.info(
+                            "%s increased from %f to %f", key, first_metrics[key], value
+                        )
 
         if not any_increased:
             test.fail("No IO metrics increased during continuous IO test")

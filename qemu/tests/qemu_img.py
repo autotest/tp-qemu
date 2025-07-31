@@ -428,12 +428,12 @@ def run(test, params, env):
         pre_name = ".".join(image_name.split(".")[:-1])
         base_image_format = params.get("image_format", "qcow2")
         overlay_file_name = "%s_overlay.qcow2" % pre_name
-        file_create_cmd = params.get("file_create_cmd", "touch /commit_testfile")
-        file_info_cmd = params.get("file_info_cmd", "ls / | grep commit_testfile")
+        file_create_cmd = params.get("file_create_cmd", "touch /home/commit_testfile")
+        file_info_cmd = params.get("file_info_cmd", "ls /home | grep commit_testfile")
         file_exist_chk_cmd = params.get(
-            "file_exist_chk_cmd", "[ -e /commit_testfile ] && echo $?"
+            "file_exist_chk_cmd", "[ -e /home/commit_testfile ] && echo $?"
         )
-        file_del_cmd = params.get("file_del_cmd", "rm -f /commit_testfile")
+        file_del_cmd = params.get("file_del_cmd", "rm -f /home/commit_testfile")
         try:
             # Remove the existing overlay file
             if os.path.isfile(overlay_file_name):

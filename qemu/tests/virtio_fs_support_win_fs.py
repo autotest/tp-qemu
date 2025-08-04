@@ -1,3 +1,5 @@
+import re
+
 from virttest import error_context, utils_misc, utils_test
 
 from provider import virtio_fs_utils
@@ -31,6 +33,7 @@ def run(test, params, env):
     driver = params["driver_name"]
     driver_verifier = params.get("driver_verifier", driver)
     driver_running = params.get("driver_running", driver_verifier)
+    check_task_cmd = params["check_task_cmd"]
 
     vm = env.get_vm(params.get("main_vm"))
     vm.verify_alive()
@@ -69,13 +72,33 @@ def run(test, params, env):
     session.cmd(reg_add_pwd)
     error_context.context("Reboot the guest.", test.log.info)
     session = vm.reboot(session)
+
     error_context.context(
         "Run autoit script to install executable in explorer.", test.log.info
     )
+    # wait several seconds to virtiofs startup
+    if not utils_misc.wait_for(
+        lambda: re.search(
+            r"RUNNING", virtio_fs_utils.query_viofs_service(test, params, session)
+        ),
+        60,
+        0,
+        5,
+    ):
+        test.error("Virtiofs service wasn't start after vm reboot.")
+
     session.cmd("start /w " + autoIt_path + " " + script_path)
     exe_name = winutils_pack_path.encode("unicode_escape").decode()[4:]
-    output = session.cmd_output("tasklist -v | findstr %s" % exe_name)
-    test.log.info("The process found: %s", output)
+    output = utils_misc.wait_for(
+        lambda: session.cmd_output(check_task_cmd % exe_name).strip(),
+        60,
+        0,
+        2,
+    )
+    if not output:
+        test.error(f"The {exe_name} isn't started.")
+
+    output = session.cmd_output(check_task_cmd % exe_name).strip()
     output_lower = output.lower()
     if "7-zip" in output_lower and "setup" in output_lower:
         test.log.info(

@@ -34,8 +34,9 @@ def run(test, params, env):
         repo_install_cmd = params.get("repo_install_cmd")
         if not repo_install_cmd:
             return
-        rhel_major_ver = _get_rhel_major_ver()
-        repo_install_cmd = repo_install_cmd % rhel_major_ver
+        # set workaround from RHEL10.0 since no cpuid package includes in epel-10.repo
+        # rhel_major_ver = _get_rhel_major_ver()
+        # repo_install_cmd = repo_install_cmd % rhel_major_ver
         session.cmd_output_safe(repo_install_cmd)
         time.sleep(5)
 

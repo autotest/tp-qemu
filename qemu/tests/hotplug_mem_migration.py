@@ -79,7 +79,8 @@ def run(test, params, env):
     # do migration
     mig_timeout = params.get_numeric("mig_timeout", 1200, float)
     mig_protocol = params.get("migration_protocol", "tcp")
-    vm.migrate(mig_timeout, mig_protocol, env=env)
+    dst_node = params.get("mig_dest_node")
+    vm.migrate(mig_timeout, mig_protocol, dest_host=dst_node, env=env)
     for target_mem in target_mems.split():
         hotplug_test.unplug_memory(vm, target_mem)
         hotplug_test.check_memory(vm)

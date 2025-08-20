@@ -22,6 +22,7 @@ from virttest import (
     utils_disk,
     utils_misc,
     utils_net,
+    utils_package,
 )
 from virttest.utils_version import VersionInterval
 from virttest.utils_windows import virtio_win
@@ -683,11 +684,23 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         :param params: Dictionary with the test parameters
         :param env: Dictionary with test environment.
         """
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
         old_password = params.get("password", "")
         new_password = params.get("new_password", "123456")
         ga_username = params.get("ga_username", "root")
         crypted = params.get("crypted", "") == "yes"
-        error_context.context("Change guest's password.")
+        error_context.context(
+            "Check if openssl exists and install it if not.", LOG_JOB.info
+        )
+        if params.get("os_type") == "linux":
+            required_pkg = params["required_pkgs"]
+            if not utils_package.package_install(required_pkg, session):
+                test.error("Failed to install openssl in guest")
+
+        error_context.context("Change guest's password.", LOG_JOB.info)
         try:
             self.gagent.set_user_password(new_password, crypted, ga_username)
             error_context.context(

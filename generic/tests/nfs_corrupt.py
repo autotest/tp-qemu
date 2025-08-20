@@ -116,7 +116,7 @@ class NFSCorruptConfig(object):
         """
         Return True if nfs is mounted, otherwise False.
         """
-        return utils_disk.is_mount(self.mnt_dir)
+        return utils_disk.is_mount(dst=self.mnt_dir)
 
     def is_mounted_dir_acessible(self):
         """

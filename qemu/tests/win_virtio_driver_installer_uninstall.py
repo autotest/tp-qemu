@@ -94,6 +94,8 @@ def run(test, params, env):
         "VirtIO FS Device",
         "QEMU FwCfg Device",
     ]
+    if params.get("boot_with_viomem", "no") == "yes":
+        device_name_list.append("VirtIO Viomem Driver")
     # viostor and vioscsi drivers can not be uninstalled by the installer
     for device_name in device_name_list:
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]

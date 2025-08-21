@@ -1,0 +1,77 @@
+import os
+
+from avocado.utils import cpu
+from virttest import data_dir as virttest_data_dir
+from virttest import env_process, error_context
+from virttest.utils_misc import verify_dmesg
+
+
+@error_context.context_aware
+def run(test, params, env):
+    """
+    Snp direct kernel boot test:
+    1. Check host snp capability
+    2. Boot snp VM with direct kernel boot
+    3. Verify snp enabled in guest
+    4. Verify attestation
+
+    :param test: QEMU test object
+    :param params: Dictionary with the test parameters
+    :param env: Dictionary with test environment.
+    """
+
+    error_context.context("Start sev-snp test", test.log.info)
+    timeout = params.get_numeric("login_timeout", 240)
+
+    snp_module_path = params["snp_module_path"]
+    if os.path.exists(snp_module_path):
+        with open(snp_module_path) as f:
+            output = f.read().strip()
+        if output not in params.objects("module_status"):
+            test.cancel("Host sev-snp support check fail.")
+    else:
+        test.cancel("Host sev-snp support check fail.")
+
+    family_id = cpu.get_family()
+    model_id = cpu.get_model()
+    dict_cpu = {"251": "milan", "2517": "genoa", "2617": "turin"}
+    key = str(family_id) + str(model_id)
+    host_cpu_model = dict_cpu.get(key, "unknown")
+
+    params["start_vm"] = "yes"
+    guest_name = params.get("guest_name")
+    params["kernel"] = f"images/{guest_name}/vmlinuz"
+    params["initrd"] = f"images/{guest_name}/initrd.img"
+
+    vm_name = params["main_vm"]
+    env_process.preprocess_vm(test, params, env, vm_name)
+    vm = env.get_vm(vm_name)
+    vm.verify_alive()
+    session = vm.wait_for_login(timeout=timeout)
+    verify_dmesg()
+    guest_check_cmd = params["snp_guest_check"]
+    try:
+        session.cmd_output(guest_check_cmd, timeout=240)
+    except Exception as e:
+        test.fail("Guest snp verify fail: %s" % str(e))
+    else:
+        # Verify attestation
+        error_context.context("Start to do attestation", test.log.info)
+        guest_dir = params["guest_dir"]
+        host_script = params["host_script"]
+        guest_cmd = params["guest_cmd"]
+        deps_dir = virttest_data_dir.get_deps_dir()
+        host_file = os.path.join(deps_dir, host_script)
+        try:
+            vm.copy_files_to(host_file, guest_dir)
+            session.cmd_output(params["guest_tool_install"], timeout=240)
+            session.cmd_output("chmod 755 %s" % guest_cmd)
+        except Exception as e:
+            test.fail("Guest test preparation fail: %s" % str(e))
+        guest_cmd = guest_cmd + " " + host_cpu_model
+        s = session.cmd_status(guest_cmd, timeout=360)
+        if s:
+            test.fail("Guest script error")
+    finally:
+        session.close()
+        vm.destroy()

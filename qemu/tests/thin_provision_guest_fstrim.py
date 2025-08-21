@@ -1,3 +1,5 @@
+import time
+
 from avocado.utils import path as utils_path
 from avocado.utils import process
 from virttest import env_process, error_context, guest_agent
@@ -115,6 +117,7 @@ def run(test, params, env):
     session.cmd("setenforce 0")
     error_context.context("Execute guest-fstrim command.", test.log.info)
     agent_session.fstrim()
+    time.sleep(1)
     new_count = get_blocks()
     error_context.context("Blocks after trim: %d" % new_count, test.log.info)
 

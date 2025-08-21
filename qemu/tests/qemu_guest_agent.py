@@ -4574,7 +4574,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             vm.copy_files_to(gagent_host_path, self.gagent_guest_dir)
             qemu_ga_pkg_path = r"%s\%s" % (self.gagent_guest_dir, qemu_ga_pkg)
         elif self.gagent_src_type == "virtio-win":
-            vol_virtio_key = "VolumeName like '%virtio-win%'"
+            vol_virtio_key = "VolumeName='virtio-win*'"
             vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
             qemu_ga_pkg_path = r"%s:\%s\%s" % (vol_virtio, "guest-agent", qemu_ga_pkg)
         else:

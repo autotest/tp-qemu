@@ -27,12 +27,12 @@ repos:
   - id: no-commit-to-branch
   - id: trailing-whitespace
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.12.9
+  rev: v0.12.10
   hooks:
     - id: ruff-check
       args: ["--fix"]
     - id: ruff-format
 - repo: https://github.com/opensource-nepal/commitlint
-  rev: v1.3.0
+  rev: v1.3.1
   hooks:
     - id: commitlint

@@ -70,6 +70,14 @@ def run(test, params, env):
         check_info = "GraphicsConsole video resolution " + resolution
         return change_resolution_key, check_info, resolution
 
+    def count_of_move_step(boot_option):
+        """
+        get the number of steps to move
+        """
+        logs = vm.logsessions["seabios"].get_output()
+        boot_option = re.findall(boot_option, logs, re.S)[0]
+        return len(re.findall(r"Boot\d+:\sUEFI", logs.split(boot_option)[0], re.S))
+
     timeout = int(params.get("timeout", 360))
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
@@ -88,6 +96,16 @@ def run(test, params, env):
     change_resolution_key, check_info, resolution = choose_resolution()
     if not utils_misc.wait_for(lambda: boot_check(boot_menu_hint), timeout, 1):
         test.fail("Could not get boot menu message")
+
+    boot_option_efi_setup = params.get("boot_option_efi_setup")
+    if boot_option_efi_setup and boot_check(boot_option_efi_setup):
+        vm.send_key("esc")
+        for i in range(count_of_move_step(boot_option_efi_setup)):
+            vm.send_key("down")
+        vm.send_key("kp_enter")
+        del enter_change_preferred[0]
+        esc_boot_menu_key.append("esc")
+
     key = []
     key += enter_change_preferred
     key += default_resolution_key

@@ -71,6 +71,13 @@ def run(test, params, env):
                 test.fail("Could not get boot menu message")
 
             # Navigate to boot manager menu
+            boot_option_efi_setup = params.get("boot_option_efi_setup")
+            if boot_option_efi_setup and boot_check(boot_option_efi_setup):
+                vm.send_key("esc")
+                for i in range(count_of_move_step(boot_option_efi_setup)):
+                    vm.send_key("down")
+                vm.send_key("kp_enter")
+                del boot_menu_key[0]
             for i in boot_menu_key:
                 vm.send_key(i)
 

@@ -44,7 +44,7 @@ def run(test, params, env):
         else:
             test.error("Could not find the correct UID for process %s" % pid)
 
-    exec_username = params.get("user_runas", "nobody")
+    exec_username = params.get("qemu_user", "nobody")
 
     error_context.base_context("Run QEMU %s test:" % exec_username)
     error_context.context("Get the user uid and gid,using 'id -u/g username'")
@@ -53,7 +53,6 @@ def run(test, params, env):
     error_context.context("Run the qemu as user '%s'" % exec_username)
     test.log.info("The user %s :uid='%s', gid='%s'", exec_username, exec_uid, exec_gid)
 
-    params["extra_params"] = " -runas %s" % exec_username
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, params.get("main_vm"))
     vm = env.get_vm(params["main_vm"])

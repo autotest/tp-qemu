@@ -48,7 +48,7 @@ def run(test, params, env):
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
     verify_dmesg()
-    vm_policy = vm.params.get_numeric("snp_policy")
+    vm_policy = int(vm.params.get("snp_policy"), 0)
     guest_check_cmd = params["snp_guest_check"]
     sev_guest_info = vm.monitor.query_sev()
     if sev_guest_info["snp-policy"] != vm_policy:

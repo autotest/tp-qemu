@@ -36,11 +36,14 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
         verify_dmesg()
-        vm_policy = vm.params.get_numeric("vm_sev_policy")
-        if vm_policy <= 3:
-            policy_keyword = "sev"
-        else:
+        vm_policy = vm.params.get("vm_sev_policy")
+        # Convert policy to int for comparison
+        vm_policy_int = int(vm_policy, 0)
+        # Check if bit 2 is set (0x4) to determine SEV-ES
+        if vm_policy_int & 0x4:
             policy_keyword = "sev-es"
+        else:
+            policy_keyword = "sev"
         guest_check_cmd = params["sev_guest_check"].format(
             policy_keyword=policy_keyword
         )
@@ -49,7 +52,7 @@ def run(test, params, env):
         except Exception as e:
             test.fail("Guest sev verify fail: %s" % str(e))
         sev_guest_info = vm.monitor.query_sev()
-        if sev_guest_info["policy"] != vm_policy:
+        if sev_guest_info["policy"] != vm_policy_int:
             test.fail("QMP sev policy doesn't match.")
         else:
             error_context.context("QMP sev policy matches", test.log.info)

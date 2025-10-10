@@ -42,8 +42,10 @@ def run(test, params, env):
     try:
         process.system_output("sevctl export --full vm.chain", shell=True)
         files_remove.append("vm.chain")
+        # sevctl expects decimal format, convert from hex if needed
+        vm_sev_policy = int(params["vm_sev_policy"], 0)
         process.system_output(
-            "sevctl session --name " + vm_name + " vm.chain " + params["vm_sev_policy"],
+            "sevctl session --name %s vm.chain %s" % (vm_name, vm_sev_policy),
             shell=True,
         )
         session_files = ["godh.b64", "session.b64", "tek.bin", "tik.bin"]

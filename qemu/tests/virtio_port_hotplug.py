@@ -78,6 +78,7 @@ def run(test, params, env):
                 "Unplug virtio port '%s' in %d tune(s)" % (port, repeat), test.log.info
             )
             vm.devices.simple_unplug(virtio_port, vm.monitor)
+            time.sleep(1)
             if port_params.get("unplug_chardev") == "yes":
                 error_context.context(
                     "Unplug chardev '%s' for virtio port '%s'" % (port, chardev_qid),
@@ -87,6 +88,7 @@ def run(test, params, env):
                 time.sleep(0.5)
                 vm.devices.simple_hotplug(port_chardev, vm.monitor)
             vm.devices.simple_hotplug(virtio_port, vm.monitor)
+            time.sleep(1)
             if module and check_module:
                 error_context.context("Load  module %s" % module, test.log.info)
                 session.cmd("modprobe %s" % module)
@@ -95,10 +97,10 @@ def run(test, params, env):
         test_set = set(process.getoutput(check_pid_command).splitlines())
         difference = test_set.difference(orig_set)
         if difference:
-            test.log.info("Kill the first serial process on host")
-            result = process.system("kill -9 %s" % difference.pop(), shell=True)
+            test.log.info("Kill all serial processes on host")
+            result = process.system("kill -9 %s" % " ".join(difference), shell=True)
             if result != 0:
-                test.log.error("Failed to kill the first serial process on host!")
+                test.log.error("Failed to kill all serial processes on host!")
         if transfer_data(params, vm) is not True:
             test.fail("Serial data transfter test failed.")
     vm.reboot()

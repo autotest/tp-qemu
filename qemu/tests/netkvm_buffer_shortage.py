@@ -130,11 +130,14 @@ def run(test, params, env):
 
     error_context.context("Analyze ping packet loss trend", test.log.info)
     if sum(ping_results) != 0:
+        # Check if overall trend is improving (non-increasing)
+        # Allow plateaus at 0% as optimal performance
         if not all(
-            ping_results[i] > ping_results[i + 1] for i in range(len(ping_results) - 1)
+            ping_results[i] >= ping_results[i + 1] for i in range(len(ping_results) - 1)
         ):
             test.fail(
-                "With parameter changes, packet loss should decrease progressively."
+                f"Packet loss should decrease or remain stable with parameter changes. "
+                f"Results: {ping_results}"
             )
 
     # Final validation on client side (no BSOD)

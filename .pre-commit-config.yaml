@@ -1,8 +1,9 @@
 ci:
   autofix_prs: false
-  autoupdate_schedule: weekly
+  autoupdate_schedule: quarterly
   skip: [no-commit-to-branch]
-default_stages: [pre-commit, pre-push]
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 exclude: "qemu/deps/cpuid/cpuid_dumps/kvm"
 repos:
 - repo: local
@@ -27,12 +28,14 @@ repos:
   - id: no-commit-to-branch
   - id: trailing-whitespace
 - repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.13.3
+  rev: v0.14.2
   hooks:
     - id: ruff-check
       args: ["--fix"]
     - id: ruff-format
-- repo: https://github.com/opensource-nepal/commitlint
-  rev: v1.3.1
+- repo: https://github.com/alessandrojcm/commitlint-pre-commit-hook
+  rev: v9.22.0
   hooks:
     - id: commitlint
+      stages: [commit-msg]
+      additional_dependencies: ['@commitlint/config-conventional']

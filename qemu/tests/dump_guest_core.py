@@ -82,7 +82,7 @@ def run(test, params, env):
     cmd = "dnf debuginfo-install -y %s" % " ".join(debuginfo_pkgs)
     try:
         process.run(cmd, timeout=900, shell=True)
-    except (process.CmdError, TimeoutError) as e:
+    except (process.CmdError, process.TimeoutError) as e:
         test.fail("Failed to install debuginfo packages: %s" % e)
 
     trigger_core_dump_command = params["trigger_core_dump_command"]

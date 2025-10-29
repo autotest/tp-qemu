@@ -157,7 +157,7 @@ def run(test, params, env):
         crash_cmd = "crash -i %s /usr/lib/debug/lib/modules/%s/vmlinux "
         crash_cmd %= (crash_script, host_kernel_version)
         crash_cmd += dump_file
-        status, output = process.getstatusoutput(crash_cmd)
+        status, output = process.getstatusoutput(crash_cmd, timeout=1800)
         os.remove(crash_script)
         test.log.debug(output)
         if status != 0 or "error" in output:

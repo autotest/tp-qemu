@@ -1,7 +1,6 @@
 import copy
 import itertools
 import json
-import re
 import statistics as st
 import time
 
@@ -430,7 +429,7 @@ def run(test, params, env):
             execute_operation("host", "mkfs.xfs -f %s " % disk)
 
         execute_operation("host", "mount %s %s && mount" % (disk, fio_dir))
-        umount_cmd = "umount -fl %s;" % fio_dir
+        umount_cmd = "umount -fl %s;sleep 3; wipefs -a %s;" % (fio_dir, disk)
         params["post_command"] = umount_cmd + params.get("post_command", "")
 
     def auto_select_disk():
@@ -485,6 +484,10 @@ def run(test, params, env):
                 if disk["fstype"] != "mpath_member":
                     logger.debug("Skip %s due to not empty", name)
                     continue
+            sig = process.getoutput("wipefs -ni %s 2>/dev/null" % name)
+            if sig:
+                logger.debug("Skip %s due to has signature: %s", name, sig)
+                continue
 
             disk_add = True
             if disk["type"] == "disk" and disk["fstype"] == "mpath_member":
@@ -520,11 +523,8 @@ def run(test, params, env):
         check_default_mq_cmd = params["check_default_mq_cmd"]
         dev = preprcess_fio_filename("stg2").replace("/dev", "")
         check_default_mq_cmd %= dev
-        output = session.cmd_output(check_default_mq_cmd)
-        logger.debug(output)
-        output = output.split("\n")[0]
-
-        default_mq_nums = len(re.split(r"[ ]+", output))
+        default_mq_nums = int(session.cmd_output(check_default_mq_cmd))
+        logger.debug(default_mq_nums)
         if default_mq_nums != int(params["vcpu_maxcpus"]):
             test.fail(
                 "Default num-queue value(%s) not equal vcpu nums(%s)"

@@ -3,7 +3,8 @@ import random
 
 import aexpect
 from avocado.utils.wait import wait_for
-from virttest import error_context, utils_misc, utils_test
+from virttest import env_process, error_context, utils_misc, utils_test
+from virttest.utils_windows import virtio_win
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -107,6 +108,18 @@ def trigger_crash(test, vm, params):
         )
 
 
+def get_inf_path(session, driver_name):
+    viowin_ltr = virtio_win.drive_letter_iso(session)
+    guest_name = virtio_win.product_dirname_iso(session)
+    guest_arch = virtio_win.arch_dirname_iso(session)
+
+    inf_middle_path = "%s\\%s" % (guest_name, guest_arch)
+    inf_find_cmd = 'dir /b /s %s\\%s.inf | findstr "\\%s\\\\"'
+    inf_find_cmd %= (viowin_ltr, driver_name, inf_middle_path)
+
+    return session.cmd(inf_find_cmd, timeout=120).strip()
+
+
 PVPANIC_PANICKED = 1
 PVPANIC_CRASHLOADED = 2
 
@@ -129,16 +142,48 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     timeout = int(params.get("timeout", 360))
+    operation_timeout = int(params.get("operation_timeout", 360))
     event_check = ["GUEST_PANICKED", "GUEST_CRASHLOADED"]
     with_events = params.get("with_events", "no") == "yes"
     debug_type = params.get_numeric("debug_type")
     events_pvpanic = params.get_numeric("events_pvpanic")
-    skip_qmp_check = params.get("skip_qmp_check", "no") == "yes"
+    devcon_path = params.get("devcon_path")
+    virtio_gpu = params.get("virtio_gpu", "no") == "yes"
+
+    vm_name = params["main_vm"]
+    if virtio_gpu:
+        params["vga"] = "virtio"
+        env_process.preprocess_vm(test, params, env, vm_name)
 
     error_context.context("Boot guest with pvpanic device", test.log.info)
-    vm = env.get_vm(params["main_vm"])
+    vm = env.get_vm(vm_name)
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
+    if virtio_gpu:
+        error_context.context("Install GPU driver on the OS", test.log.info)
+        devcon_path = utils_misc.set_winutils_letter(session, devcon_path)
+        status, output = session.cmd_status_output(
+            "dir %s" % devcon_path, timeout=operation_timeout
+        )
+        if status:
+            test.error("Not found devcon.exe, details: %s" % output)
+
+        viogpu_inf_path = get_inf_path(session, "viogpudo")
+        if not viogpu_inf_path:
+            test.error("viogpu_inf_path not specified in config")
+        viogpu_hwid = params.get(
+            "viogpu_hwid", "PCI\\VEN_1AF4&DEV_1050&SUBSYS_11001AF4&REV_01"
+        )
+
+        inst_cmd = '%s update "%s" "%s"' % (devcon_path, viogpu_inf_path, viogpu_hwid)
+        status, output = session.cmd_status_output(inst_cmd, timeout=operation_timeout)
+        if status > 1:
+            test.error(
+                "Failed to install viogpudo driver, status: %s, output: %s"
+                % (status, output)
+            )
+        LOG_JOB.info("viogpudo driver installed successfully")
+
     if params.get("os_type") == "windows":
         error_context.context(
             "Check if the driver is installed and verified", test.log.info

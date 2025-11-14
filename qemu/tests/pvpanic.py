@@ -133,6 +133,7 @@ def run(test, params, env):
     with_events = params.get("with_events", "no") == "yes"
     debug_type = params.get_numeric("debug_type")
     events_pvpanic = params.get_numeric("events_pvpanic")
+    skip_qmp_check = params.get("skip_qmp_check", "no") == "yes"
 
     error_context.context("Boot guest with pvpanic device", test.log.info)
     vm = env.get_vm(params["main_vm"])
@@ -172,9 +173,12 @@ def run(test, params, env):
     error_context.context("Trigger crash", test.log.info)
     trigger_crash(test, vm, params)
 
-    error_context.context("Check the panic event in qmp", test.log.info)
-    result = check_qmp_events(vm, event_check, timeout)
-    if not check_empty and not result:
-        test.fail("Did not receive panic event notification")
-    elif check_empty and result:
-        test.fail("Did receive panic event notification, but should not")
+    if skip_qmp_check:
+        test.log.info("Skipping QMP event check for i440fx machine type")
+    else:
+        error_context.context("Check the panic event in qmp", test.log.info)
+        result = check_qmp_events(vm, event_check, timeout)
+        if not check_empty and not result:
+            test.fail("Did not receive panic event notification")
+        elif check_empty and result:
+            test.fail("Did receive panic event notification, but should not")

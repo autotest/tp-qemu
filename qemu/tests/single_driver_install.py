@@ -198,8 +198,12 @@ def run(test, params, env):
 
     ver_list = _pnpdrv_info(session, device_name, ["DriverVersion"])
     if expected_ver not in ver_list:
-        test.fail(
-            "The expected driver version is '%s', but "
-            "found '%s'" % (expected_ver, ver_list)
+        # Windows 11 cannot disable Windows Update, which can cause drivers to
+        # sometimes update to newer versions. However, this error is not serious
+        # and can be reported as a warning message.
+        LOG_JOB.warning(
+            "The expected driver version is '%s', but found '%s'",
+            expected_ver,
+            ver_list,
         )
     session.close()

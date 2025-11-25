@@ -44,7 +44,8 @@ def run(test, params, env):
         vm.destroy()
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
-    session = vm.wait_for_login()
+    timeout = params.get_numeric("login_timeout", 360)
+    session = vm.wait_for_login(timeout=timeout)
     check_sign_cmd = params["check_sign_cmd"]
     sign_keyword = params["sign_keyword"]
     os_type = params["os_type"]
@@ -75,7 +76,7 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     try:
-        session = vm.wait_for_serial_login()
+        session = vm.wait_for_serial_login(timeout=timeout)
     except remote.LoginTimeoutError:
         if signed:
             test.fail("The guest is signed, but boot failed under secure mode.")

@@ -117,6 +117,8 @@ def run(test, params, env):
             image_params = params.object_params(image_name)
             image_path = params.get("images_base_dir", data_dir.get_data_dir())
             old_name = storage.get_image_filename(image_params, image_path)
+            if len(post_rhel_ver) == 3 and len(pre_rhel_ver) == 2:
+                pre_rhel_ver += "0"
             upgraded_name = old_name.replace(pre_rhel_ver, post_rhel_ver)
             process.run(params.get("image_clone_command") % (old_name, upgraded_name))
         except Exception as error:

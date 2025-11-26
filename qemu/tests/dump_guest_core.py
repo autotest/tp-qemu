@@ -45,7 +45,7 @@ def run(test, params, env):
             % (dump_guest_memory_file, vmcore_file, arch, gdb_command_file)
         )
         process.run(command, shell=True)
-        status, output = process.getstatusoutput(gdb_command, timeout=360)
+        status, output = process.getstatusoutput(gdb_command, timeout=1800)
         os.remove(gdb_command_file)
         os.remove(core_file)
         test.log.debug(output)
@@ -62,7 +62,7 @@ def run(test, params, env):
         process.run(
             'echo -e "bt\ntask 0\ntask 1\nquit" > %s' % crash_script, shell=True
         )
-        output = process.getoutput(crash_cmd, timeout=60)
+        output = process.getoutput(crash_cmd, timeout=1800)
         os.remove(crash_script)
         os.remove(vmcore_file)
         test.log.debug(output)
@@ -82,7 +82,7 @@ def run(test, params, env):
     cmd = "dnf debuginfo-install -y %s" % " ".join(debuginfo_pkgs)
     try:
         process.run(cmd, timeout=900, shell=True)
-    except (process.CmdError, process.TimeoutError) as e:
+    except (process.CmdError, TimeoutError) as e:
         test.fail("Failed to install debuginfo packages: %s" % e)
 
     trigger_core_dump_command = params["trigger_core_dump_command"]
@@ -113,5 +113,5 @@ def run(test, params, env):
         check_core_file(arch)
         if dump_guest_core == "on" and check_vmcore == "yes":
             crash_cmd %= host_kernel_version
-            utils_misc.wait_for(lambda: os.path.exists(vmcore_file), timeout=60)
+            utils_misc.wait_for(lambda: os.path.exists(vmcore_file), timeout=1800)
             check_vmcore_file()

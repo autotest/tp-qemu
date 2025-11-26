@@ -10,6 +10,7 @@ from virttest.utils_misc import normalize_data_size
 
 from provider import virtio_fs_utils, virtio_mem_utils, win_driver_utils
 from provider.storage_benchmark import generate_instance
+from provider.vioinput_basic import key_tap_test as vioinput_test  # noqa: F401
 from qemu.tests.virtio_serial_file_transfer import transfer_data
 
 LOG_JOB = logging.getLogger("avocado.test")

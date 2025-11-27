@@ -5,6 +5,8 @@ import aexpect
 from avocado.utils.wait import wait_for
 from virttest import error_context, utils_misc, utils_test
 
+from provider.win_driver_utils import install_driver_by_virtio_media
+
 LOG_JOB = logging.getLogger("avocado.test")
 
 
@@ -139,6 +141,15 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login(timeout=timeout)
+    if params["vga"] == "virtio":
+        install_driver_by_virtio_media(
+            session,
+            test,
+            devcon_path=params["devcon_path"],
+            media_type=params["virtio_win_media_type"],
+            driver_name="viogpudo",
+            device_hwid=params["viogpu_hwid"],
+        )
     if params.get("os_type") == "windows":
         error_context.context(
             "Check if the driver is installed and verified", test.log.info

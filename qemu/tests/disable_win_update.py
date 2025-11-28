@@ -26,9 +26,10 @@ def run(test, params, env):
 
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
-    session = vm.wait_for_login(timeout=float(params.get("login_timeout", 240)))
+    timeout = params.get_numeric("login_timeout", 240, float)
+    session = vm.wait_for_login(timeout=timeout)
 
-    cmd_timeout = float(params.get("cmd_timeout", 180))
+    cmd_timeout = params.get_numeric("cmd_timeout", 180, float)
     scname = params.get("win_update_service", "WuAuServ")
 
     error_context.context("Turned off windows updates service.", test.log.info)
@@ -38,6 +39,6 @@ def run(test, params, env):
         )
         if not status:
             test.fail("Turn off updates service failed.")
-        session = vm.reboot(session)
+        session = vm.reboot(session, timeout=timeout)
     finally:
         session.close()

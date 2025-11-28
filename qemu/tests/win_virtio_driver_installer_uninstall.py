@@ -6,6 +6,7 @@ from virttest import error_context
 from provider import win_driver_utils
 from provider.win_driver_installer_test import (
     check_gagent_version,
+    device_name_list,
     driver_check,
     install_gagent,
     run_installer_with_interaction,
@@ -83,21 +84,23 @@ def run(test, params, env):
     error_context.context("Check if all drivers are uninstalled.", test.log.info)
     # Wait a moment to check if drivers were uninstalled totally
     time.sleep(5)
+
     uninstalled_device = []
-    device_name_list = [
-        "VirtIO RNG Device",
-        "VirtIO Serial Driver",
-        "VirtIO Balloon Driver",
-        "QEMU PVPanic Device",
-        "VirtIO Input Driver",
-        "Red Hat VirtIO Ethernet Adapter",
-        "VirtIO FS Device",
-        "QEMU FwCfg Device",
+    # Filter out SCSI devices (cannot be uninstalled by installer)
+    need_uninstall_devices = [
+        name
+        for name in device_name_list
+        if not any(scsi in name for scsi in ["SCSI controller", "SCSI pass-through"])
     ]
-    if params.get("boot_with_viomem", "no") == "yes":
-        device_name_list.append("VirtIO Viomem Driver")
-    # viostor and vioscsi drivers can not be uninstalled by the installer
-    for device_name in device_name_list:
+    # Filter out VirtIO Viomem Driver if boot_with_viomem is not enabled
+    if params.get("boot_with_viomem", "no") == "no":
+        need_uninstall_devices = [
+            name
+            for name in need_uninstall_devices
+            if "VirtIO Viomem Driver" not in name
+        ]
+
+    for device_name in need_uninstall_devices:
         chk_cmd = params["vio_driver_chk_cmd"] % device_name[0:30]
         output = session.cmd_output(chk_cmd).strip()
         inf_name = re.findall(r"\.inf", output, re.I)

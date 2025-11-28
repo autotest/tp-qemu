@@ -5,13 +5,11 @@ windows driver utility functions.
 """
 
 import logging
-import os
 import re
 import time
 
 import aexpect
-from virttest import data_dir, error_context, utils_misc, utils_test
-from virttest.utils_version import VersionInterval
+from virttest import error_context, utils_misc, utils_test
 from virttest.utils_windows import system, virtio_win, wmic
 
 LOG_JOB = logging.getLogger("avocado.test")
@@ -98,8 +96,10 @@ def uninstall_driver(session, test, devcon_path, driver_name, device_name, devic
 
     # Check if any drivers were found
     if not inf_list:
-        LOG_JOB.warning("No driver found for device '%s'. 
-                        Driver may not installed.", device_name)
+        LOG_JOB.warning(
+            "No driver found for device '%s'. Driver may not installed.", device_name
+        )
+        return
 
     # pnputil flags available starting in Windows 10,
     #  version 1607, build 14393 later
@@ -154,14 +154,15 @@ def get_driver_inf_path(session, test, media_type, driver_name, params):
     inf_middle_path = (
         "{name}\\{arch}" if media_type == "iso" else "{arch}\\{name}"
     ).format(name=guest_name, arch=guest_arch)
-    formal_inf_find_cmd = 'dir /b /s VIOWIN_LTR\\DRIVER_NAME.inf |'
+    formal_inf_find_cmd = "dir /b /s VIOWIN_LTR\\DRIVER_NAME.inf |"
     formal_inf_find_cmd += ' findstr "\\INF_MID_PATH\\\\'
     inf_find_cmd = params.get("inf_find_cmd", formal_inf_find_cmd)
 
-    inf_find_cmd_new = inf_find_cmd.replace(
-        'VIOWIN_LTR', viowin_ltr).replace(
-        'DRIVER_NAME', driver_name).replace(
-        'INF_MID_PATH', inf_middle_path)
+    inf_find_cmd_new = (
+        inf_find_cmd.replace("VIOWIN_LTR", viowin_ltr)
+        .replace("DRIVER_NAME", driver_name)
+        .replace("INF_MID_PATH", inf_middle_path)
+    )
 
     inf_path = session.cmd(inf_find_cmd_new, timeout=OPERATION_TIMEOUT).strip()
     LOG_JOB.info("Found inf file '%s'", inf_path)
@@ -195,8 +196,7 @@ def install_driver_by_virtio_media(
         output = session.cmd_output("%s find %s" % (devcon_path, hwid))
         if re.search("No matching devices found", output, re.I):
             continue
-        inf_path = get_driver_inf_path(session, test, media_type,
-                                       driver_name, params)
+        inf_path = get_driver_inf_path(session, test, media_type, driver_name, params)
         inst_cmd = "%s updateni %s %s" % (devcon_path, inf_path, hwid)
         status, output = session.cmd_status_output(inst_cmd, INSTALL_TIMEOUT)
         # acceptable status: OK(0), REBOOT(1)

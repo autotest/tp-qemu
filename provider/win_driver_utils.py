@@ -96,6 +96,13 @@ def uninstall_driver(session, test, devcon_path, driver_name, device_name, devic
     inf_list_all = _pnpdrv_info(session, device_name, ["InfName"])
     inf_list = list(set(inf_list_all))
 
+    # Check if any drivers were found
+    if not inf_list:
+        LOG_JOB.warning(
+            "No driver found for device '%s', driver may not installed.", device_name
+        )
+        return
+
     # pnputil flags available starting in Windows 10,
     #  version 1607, build 14393 later
     build_ver = system.version(session).split(".")[2]

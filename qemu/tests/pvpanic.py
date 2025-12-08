@@ -4,6 +4,7 @@ import random
 import aexpect
 from avocado.utils.wait import wait_for
 from virttest import error_context, utils_misc, utils_test
+from virttest.qemu_monitor import MonitorSocketError
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -51,11 +52,18 @@ def check_qmp_events(vm, event_names, timeout=360):
     """
 
     def _do_check(vm, event_names):
-        for name in event_names:
-            if vm.monitor.get_event(name):
-                LOG_JOB.info("Receive qmp %s event notification", name)
-                vm.monitor.clear_event(name)
-                return True
+        try:
+            events = vm.monitor.get_events()
+            for event in events:
+                if event.get("event") in event_names:
+                    LOG_JOB.info(
+                        "Receive qmp %s event notification", event.get("event")
+                    )
+                    vm.monitor.clear_event(event.get("event"))
+                    return True
+        except MonitorSocketError:
+            LOG_JOB.warning("QMP connection closed")
+            return None
         return False
 
     LOG_JOB.info("Try to get qmp events %s in %s seconds!", event_names, timeout)

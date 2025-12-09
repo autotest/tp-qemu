@@ -160,7 +160,7 @@ class UEFIShellTest(object):
         time.sleep(interval)
         # Judge if cmd is run successfully via environment variable 'lasterror'
         last_error = self.params["last_error"]
-        env_var = self.session.cmd_output_safe("set")
+        env_var = self.session.cmd_output_safe("set", timeout=timeout)
         if not re.search(last_error, env_var, re.S):
             self.test.fail(
                 "Following errors appear %s when running command %s" % (output, command)

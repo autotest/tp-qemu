@@ -1,10 +1,11 @@
+import os
 import random
 import re
 import time
 
 from avocado.core import exceptions
 from avocado.utils import process
-from virttest import error_context, qemu_monitor, utils_misc, utils_test
+from virttest import data_dir, error_context, qemu_monitor, utils_misc, utils_test
 from virttest.utils_numeric import normalize_data_size
 from virttest.utils_test.qemu import MemoryBaseTest
 
@@ -500,6 +501,56 @@ class BallooningTestWin(BallooningTest):
             return utils_misc.get_win_disk_vol(session, condition=key)
         except Exception:
             self.test.error("Could not get virtio-win disk vol!")
+
+    def assert_no_wmi_error_5858(self, session):
+        """
+        Ensure there are no WMI-Activity Event ID 5858 entries emitted by the
+        balloon service since it started.
+        This checks the 'Microsoft-Windows-WMI-Activity/Operational' log.
+        """
+        if self.params.get("os_type") != "windows":
+            return
+        log_name = "Microsoft-Windows-WMI-Activity/Operational"
+        error_context.context(
+            "Verify no WMI 5858 events since blnsvr.exe start (log: %s)" % log_name,
+            self.test.log.info,
+        )
+
+        # Copy WMI 5858 check script from host to guest
+        balloon_deps_dir = data_dir.get_deps_dir("balloon")
+        wmi_script_name = self.params.get("wmi_check_script")
+        wmi_script_host = os.path.join(balloon_deps_dir, wmi_script_name)
+        wmi_script_guest_path = self.params.get("wmi_script_guest_path")
+        self.vm.copy_files_to(wmi_script_host, wmi_script_guest_path)
+        self.test.log.info(
+            "Copied WMI check script to guest: %s", wmi_script_guest_path
+        )
+
+        # Execute the script
+        ps_cmd = self.params.get("wmi_5858_check_cmd") % wmi_script_guest_path
+        status, output = session.cmd_status_output(ps_cmd)
+        self.test.log.info(
+            "WMI 5858 check result: %s (status %s)",
+            output.strip(),
+            status,
+        )
+        if status == 0:
+            self.test.log.info(
+                "No WMI-Activity Event ID 5858 found since blnsvr.exe start."
+            )
+        elif status == 1:
+            self.test.fail(
+                "Detected WMI-Activity Event ID 5858 since blnsvr.exe start."
+            )
+        elif status == 2:
+            self.test.log.info(
+                "Balloon service process not running; skipping WMI 5858 check."
+            )
+        else:
+            self.test.fail(
+                "WMI 5858 check returned unexpected status %s. Output: %s"
+                % (status, output)
+            )
 
     @error_context.context_aware
     def operate_balloon_service(self, session, operation):

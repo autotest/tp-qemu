@@ -501,6 +501,61 @@ class BallooningTestWin(BallooningTest):
         except Exception:
             self.test.error("Could not get virtio-win disk vol!")
 
+    def assert_no_wmi_error_5858(self, session):
+        """
+        Ensure there are no WMI-Activity Event ID 5858 entries emitted by the
+        balloon service since it started.
+        This checks the 'Microsoft-Windows-WMI-Activity/Operational' log.
+        """
+        if self.params.get("os_type") != "windows":
+            return
+        log_name = "Microsoft-Windows-WMI-Activity/Operational"
+        error_context.context(
+            "Verify no WMI 5858 events since blnsvr.exe start (log: %s)" % log_name,
+            self.test.log.info,
+        )
+        ps_cmd = self.params.get("wmi_5858_check_cmd")
+        if not ps_cmd:
+            self.test.log.warning(
+                "Missing wmi_5858_check_cmd in cfg; "
+                "skipping WMI 5858 check."
+            )
+            return
+        status, output = session.cmd_status_output(ps_cmd)
+        self.test.log.info(
+            "WMI 5858 check result: %s (status %s)",
+            output.strip(),
+            status,
+        )
+        if status == 1:
+            self.test.log.error(
+                "Detected WMI-Activity Event ID 5858 "
+                "since blnsvr.exe start."
+            )
+            self.test.fail(
+                "Detected WMI-Activity Event ID 5858 "
+                "since blnsvr.exe start."
+            )
+            return
+        if status == 2:
+            self.test.log.info(
+                "Balloon service process not running; "
+                "skipping WMI 5858 check."
+            )
+            return
+        if status == 0:
+            self.test.log.info(
+                "No WMI-Activity Event ID 5858 found "
+                "since blnsvr.exe start."
+            )
+            return
+        self.test.log.warning(
+            "WMI 5858 check skipped due to non-zero/unknown exit (%s). Output: %s",
+            status,
+            output,
+        )
+        return
+
     @error_context.context_aware
     def operate_balloon_service(self, session, operation):
         """

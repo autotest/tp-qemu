@@ -1,5 +1,11 @@
 #!/bin/bash
-set -e
+
+check_status() {
+    if [ $? -ne 0 ]; then
+        echo "Error: $1"
+        exit 1
+    fi
+}
 
 # Check for the required CPU model parameter
 if [[ -z "$1" ]]; then
@@ -30,23 +36,22 @@ fetch_retry() {
 
 # Verify regular attestation workflow on snp guest
 snpguest report attestation-report.bin request-data.txt --random
-snpguest display report attestation-report.bin
-
-
-# Fetch cert
-set +e
-fetch_retry "snpguest fetch ca pem ${cpu_model} ./ -e vcek"
-if [[ $? -ne 0 ]]; then
-   echo "ok"
-   exit 1
-fi
-
-fetch_retry "snpguest fetch vcek pem ${cpu_model} ./ attestation-report.bin"
-if [[ $? -ne 0 ]]; then
+if [[ ! -f attestation-report.bin ]]; then
+    echo "attestation-report.bin not created."
     exit 1
 fi
+snpguest display report attestation-report.bin
+check_status "Failed display attestation-report."
+
+# Fetch cert
+fetch_retry "snpguest fetch ca -e vcek pem ./ ${cpu_model}"
+check_status "Failed to fetch CA certificate."
+
+fetch_retry "snpguest fetch vcek -p ${cpu_model} pem ./ attestation-report.bin"
+check_status "Failed to fetch VCEK certificate."
 
 # Verify certs
-set -e
 snpguest verify certs ./
-snpguest verify attestation ./ attestation-report.bin
+check_status "Failed to verify certificates."
+snpguest verify attestation -p ${cpu_model} ./ attestation-report.bin
+check_status "Failed to verify attestation."

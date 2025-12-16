@@ -83,14 +83,6 @@ class WinDebugToolTest:
         self.session.cmd_output(self.params["cmd_create_dir"] % self.tmp_dir)
         self.session.cmd(f'cd "{self.tmp_dir}"')
 
-        # Disable IE Enhanced Security Configuration for Win2016 if configured
-        if self.params.get("cmd_disable_ie_esc_admin"):
-            error_context.context(
-                "Disabling IE Enhanced Security Configuration.", LOG_JOB.info
-            )
-            self.session.cmd(self.params["cmd_disable_ie_esc_admin"])
-            self.session.cmd(self.params["cmd_disable_ie_esc_user"])
-
     def _run_script_and_get_paths(self, extra_args=""):
         """
         Runs the CollectSystemInfo.ps1 script and parses its output for file paths.
@@ -780,6 +772,71 @@ class WinDebugToolTest:
         if not any(new_metrics.get(k, 0) > v for k, v in baseline_metrics.items()):
             self.test.fail("IO metrics did not increase under load.")
         LOG_JOB.info("IO metrics increased as expected.")
+
+    @error_context.context_aware
+    def _check_MTV_firstboot_log_collection(self):
+        """
+        Verifies that the Firstboot log is correctly collected and renamed.
+        """
+        firstboot_dir = self.params.get("firstboot_dir")
+        firstboot_file = self.params.get("firstboot_file")
+        full_path = f"{firstboot_dir}\\{firstboot_file}"
+        content = self.params.get("firstboot_content")
+
+        # 1. Check and prepare the environment
+        error_context.context(
+            "Checking and preparing Firstboot log file.", LOG_JOB.info
+        )
+        # Check if file exists
+        check_cmd = f"powershell.exe -Command \"Test-Path '{full_path}'\""
+        exists = self.session.cmd_output(check_cmd).strip().lower() == "true"
+
+        if not exists:
+            LOG_JOB.info("Firstboot log not found. Creating it...")
+            self.session.cmd(self.params["cmd_create_firstboot_dir"] % firstboot_dir)
+            self.session.cmd(
+                self.params["cmd_create_firstboot_file"] % (full_path, content)
+            )
+        else:
+            LOG_JOB.info("Firstboot log found. Updating content...")
+            self.session.cmd(
+                self.params["cmd_create_firstboot_file"] % (full_path, content)
+            )
+
+        # 2. Run script
+        paths = self._run_script_and_get_paths()
+
+        # 3. Verify collection
+        error_context.context(
+            "Verifying Firstboot log collection and renaming.", LOG_JOB.info
+        )
+        collected_name = self.params.get("collected_file_name")
+        collected_path = f"{paths['log_folder']}\\{collected_name}"
+
+        # Check existence
+        check_collected_cmd = (
+            f"powershell.exe -Command \"Test-Path '{collected_path}'\""
+        )
+        collected_exists = (
+            self.session.cmd_output(check_collected_cmd).strip().lower() == "true"
+        )
+
+        if not collected_exists:
+            self.test.fail(
+                f"Collected file '{collected_name}' not found in log folder."
+            )
+
+        # Check content
+        collected_content = self.session.cmd_output(
+            self.params["cmd_check_file_content"] % collected_path
+        ).strip()
+
+        if content not in collected_content:
+            self.test.fail(
+                "Collected file content does not match expected content.\n"
+                f"Expected: {content}\n"
+                f"Actual: {collected_content}"
+            )
 
     @error_context.context_aware
     def execute(self):

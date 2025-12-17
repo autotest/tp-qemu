@@ -40,6 +40,8 @@ def run(test, params, env):
         pci_model = params.get("pci_model")
         netdst = params.get("netdst", "virbr0")
         nettype = params.get("nettype", "bridge")
+        hotplug_sleep = int(params.get("hotplug_sleep", 3))
+        hotunplug_sleep = int(params.get("hotunplug_sleep", 3))
         for i in range(1, 100):
             nic_name = "hotadded%s" % i
             vm.hotplug_nic(
@@ -49,9 +51,9 @@ def run(test, params, env):
                 nettype=nettype,
                 queues=params.get("queues"),
             )
-            time.sleep(3)
+            time.sleep(hotplug_sleep)
             vm.hotunplug_nic(nic_name)
-            time.sleep(3)
+            time.sleep(hotunplug_sleep)
     else:
         session.cmd_output_safe("swapoff -a")
         mac = vm.get_mac_address()
@@ -69,13 +71,18 @@ def run(test, params, env):
     test.log.info("Guest free memory after nic hotplug: %d", free_mem_after_nichotplug)
 
     mem_reduced = free_mem_before_nichotplug - free_mem_after_nichotplug
-    if (os_type == "windows" and mem_reduced > 1024) or (
-        os_type == "linux" and mem_reduced > 200
-    ):
+    mem_reduced_percent = (mem_reduced / free_mem_before_nichotplug) * 100
+    threshold_percent = float(params.get("mem_leak_threshold_percent"))
+
+    if mem_reduced_percent > threshold_percent:
         test.error(
             "There might be memory leak after hotplug nic. "
-            "Memory reduced %d" % mem_reduced
+            "Memory reduced %d KB (%.2f%%), threshold: %.2f%%"
+            % (mem_reduced, mem_reduced_percent, threshold_percent)
         )
-    error_context.context("Memory reduced = %d" % mem_reduced, test.log.info)
+    error_context.context(
+        "Memory reduced = %d KB (%.2f%%)" % (mem_reduced, mem_reduced_percent),
+        test.log.info,
+    )
 
     session.close()

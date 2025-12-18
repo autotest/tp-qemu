@@ -124,7 +124,7 @@ def run(test, params, env):
                 if driver_name == "viomem":
                     continue
             win_driver_utils.install_driver_by_virtio_media(
-                session, test, devcon_path, media_type, driver_name, device_hwid
+                session, test, devcon_path, media_type, driver_name, device_hwid, params
             )
         win_driver_installer_test.install_gagent(
             session, test, qemu_ga_pkg, gagent_install_cmd, gagent_pkg_info_cmd

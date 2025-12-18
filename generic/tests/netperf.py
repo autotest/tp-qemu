@@ -173,8 +173,9 @@ def run(test, params, env):
             session = vm.wait_for_login(nic_index=2, timeout=login_timeout)
             for driver_name in driver_name.split():
                 inf_path = win_driver_utils.get_driver_inf_path(
-                    session, test, media_type, driver_name
+                    session, test, media_type, driver_name, params
                 )
+
                 if driver_name == "netkvm":
                     device_name = params.get("device_name")
                     device_hwid = params.get("device_hwid")

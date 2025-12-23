@@ -5,6 +5,7 @@ from avocado.utils import linux_modules, path
 from virttest import error_context, utils_misc, utils_vsock
 from virttest.qemu_devices import qdevices
 
+from provider.win_driver_installer_test import viosock_test
 from qemu.tests import vsock_negative_test, vsock_test
 
 
@@ -30,10 +31,10 @@ def run(test, params, env):
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     session = vm.wait_for_login()
+    os_type = params.get("os_type")
     guest_cid = utils_vsock.get_guest_cid(3)
     vsock_id = "hotplugged_vsock"
     vsock_params = {"id": vsock_id, "guest-cid": guest_cid}
-    vsock_test_tool = params["vsock_test_tool"]
     if "-mmio:" in params.get("machine_type"):
         dev_vsock = qdevices.QDevice("vhost-vsock-device", vsock_params)
     elif params.get("machine_type").startswith("s390"):
@@ -49,8 +50,13 @@ def run(test, params, env):
     device_pattern = params["device_pattern"]
     check_vsock_cmd = params.get("check_vsock_cmd", "lspci")
     time.sleep(10)
-    lspci_output = session.cmd_output(check_vsock_cmd)
-    device_str = re.findall(r"%s\s%s" % (addr_pattern, device_pattern), lspci_output)
+    output = session.cmd_output(check_vsock_cmd)
+    device_str = None
+    if os_type == "windows":
+        if device_pattern not in output:
+            test.fail('Not find vsock device: "%s"' % device_pattern)
+    else:
+        device_str = re.findall(r"%s\s%s" % (addr_pattern, device_pattern), output)
 
     if params.get("dmesg_check") == "yes":
         if not device_str:
@@ -71,21 +77,27 @@ def run(test, params, env):
                     test.fail("dmesg check failed: %s" % error_msg)
     # Transfer data from guest to host
     try:
-        if vsock_test_tool == "nc_vsock":
-            tool_bin = vsock_test.compile_nc_vsock(test, vm, session)
-        elif vsock_test_tool == "ncat":
-            tool_bin = path.find_command("ncat")
+        if os_type == "windows":
+            viosock_test(test, params, vm, guest_cid)
         else:
-            raise ValueError(f"unsupported test tool: {vsock_test_tool}")
-        tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
-        rec_session = vsock_test.send_data_from_guest_to_host(
-            session, tool_bin, guest_cid, tmp_file
-        )
-        vsock_negative_test.check_data_received(test, rec_session, tmp_file)
-        vm.devices.simple_unplug(dev_vsock, vm.monitor)
-        vsock_negative_test.kill_host_receive_process(test, rec_session)
-        vsock_test.check_guest_vsock_conn_exit(test, session)
+            vsock_test_tool = params["vsock_test_tool"]
+            if vsock_test_tool == "nc_vsock":
+                tool_bin = vsock_test.compile_nc_vsock(test, vm, session)
+            elif vsock_test_tool == "ncat":
+                tool_bin = path.find_command("ncat")
+            else:
+                raise ValueError(f"unsupported test tool: {vsock_test_tool}")
+            tmp_file = "/tmp/vsock_file_%s" % utils_misc.generate_random_string(6)
+            rec_session = vsock_test.send_data_from_guest_to_host(
+                session, tool_bin, guest_cid, tmp_file
+            )
+            vsock_negative_test.check_data_received(test, rec_session, tmp_file)
+            vm.devices.simple_unplug(dev_vsock, vm.monitor)
+            vsock_negative_test.kill_host_receive_process(test, rec_session)
+            vsock_test.check_guest_vsock_conn_exit(test, session)
     finally:
-        session.cmd_output("rm -f %s" % tmp_file)
+        # For windows testing, transfer_file() will remove the file
+        if params.get("os_type") == "linux":
+            session.cmd_output("rm -f %s" % tmp_file)
         session.close()
     vm.reboot()

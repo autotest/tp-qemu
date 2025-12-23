@@ -123,6 +123,9 @@ def run(test, params, env):
             if params.get("boot_with_viomem", "no") == "no":
                 if driver_name == "viomem":
                     continue
+            if params.get("boot_with_viosock", "no") == "no":
+                if driver_name == "viosock":
+                    continue
             win_driver_utils.install_driver_by_virtio_media(
                 session, test, devcon_path, media_type, driver_name, device_hwid
             )

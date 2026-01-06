@@ -128,7 +128,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         """
         error_context.context("Check whether qemu-ga is installed.", LOG_JOB.info)
         s, o = session.cmd_status_output(cmd_check_pkg)
-        if s == 0 and self.params.get("os_variant", "") == "rhel8":
+        if s == 0 and self.params.get("os_variant", "").startswith("rhel8"):
             error_context.context(
                 "Check if the installed pkg is the specific one for rhel8 guest.",
                 LOG_JOB.info,
@@ -199,7 +199,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         error_context.context(
             "Try to install 'qemu-guest-agent' package.", LOG_JOB.info
         )
-        if self.params.get("os_variant", "") == "rhel8":
+        if self.params.get("os_variant", "").startswith("rhel8"):
             cmd = self.params["gagent_pkg_check_cmd"]
             s_check, o_check = session.cmd_status_output(cmd)
             if s_check == 0:
@@ -215,7 +215,7 @@ class QemuGuestAgentTest(BaseVirtTest):
             self.test.fail(
                 "qemu-guest-agent install failed, the detailed info:\n%s." % o_inst
             )
-        if self.params.get("os_variant", "") == "rhel8" and s_check == 0:
+        if self.params.get("os_variant", "").startswith("rhel8") and s_check == 0:
             error_context.context(
                 "A new pkg is installed, so restart qemu-guest-agent service.",
                 LOG_JOB.info,
@@ -346,7 +346,7 @@ class QemuGuestAgentTest(BaseVirtTest):
         if self.start_vm == "yes":
             session = self._get_session(params, self.vm)
             self._open_session_list.append(session)
-            if self.params.get("os_variant", "") == "rhel8":
+            if self.params.get("os_variant", "").startswith("rhel8"):
                 error_context.context(
                     "Get the qemu-guest-agent pkg for rhel8 guest.", LOG_JOB.info
                 )
@@ -3307,7 +3307,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         )
         cmd_get_hook = "ps aux |grep /usr/bin/qemu-ga |grep fsfreeze-hook"
         hook_path_info = session.cmd_output(cmd_get_hook).strip()
-        if params["os_variant"] == "rhel6":
+        if params["os_variant"].startswith("rhel6"):
             error_context.context(
                 "For rhel6 guest,need to enable fsfreeze"
                 " hook and restart agent service.",
@@ -3848,7 +3848,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         error_context.context("Umount fs or offline disk in guest.", LOG_JOB.info)
         if params.get("os_type") == "linux":
-            if params["os_variant"] == "rhel6":
+            if params["os_variant"].startswith("rhel6"):
                 try:
                     session.cmd("umount %s" % mnt_point[0])
                 except ShellTimeoutError:
@@ -3887,12 +3887,12 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         if params.get("os_type") == "linux":
             try:
                 if not utils_disk.mount(src, mnt_point[0], session=session):
-                    if params["os_variant"] != "rhel6":
+                    if not params["os_variant"].startswith("rhel6"):
                         test.fail(
                             "For rhel7+ guest, mount fs should success after fsthaw."
                         )
                 else:
-                    if params["os_variant"] == "rhel6":
+                    if params["os_variant"].startswith("rhel6"):
                         test.fail("For rhel6 guest, mount fs should fail after fsthaw.")
             finally:
                 self.gagent_setsebool_value("off", params, self.vm)

@@ -9,12 +9,12 @@ from virttest.utils_misc import get_mem_info, normalize_data_size, verify_dmesg
 @error_context.context_aware
 def run(test, params, env):
     """
-    Qemu snp basic test on Milan and above host:
+    Qemu snp concurrent multi-VM test on Milan and above host:
     1. Check host snp capability
     2. Adjust guest memory by host resources
-    3. Boot snp VM
-    4. Verify snp enabled in guest
-    5. Test attestation
+    3. Boot multiple SNP VMs concurrently
+    4. Verify snp enabled in all guests concurrently
+    5. Test attestation on all VMs
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -24,11 +24,22 @@ def run(test, params, env):
     error_context.context("Start sev-snp test", test.log.info)
     timeout = params.get_numeric("login_timeout", 240)
 
-    family_id = cpu.get_family()
-    model_id = cpu.get_model()
-    dict_cpu = {"251": "milan", "2517": "genoa", "2617": "turin"}
-    key = str(family_id) + str(model_id)
-    host_cpu_model = dict_cpu.get(key, "unknown")
+    family_id = int(cpu.get_family())
+    model_id = int(cpu.get_model())
+    dict_cpu = {
+        "milan": [25, 0, 15],
+        "genoa": [25, 16, 31],
+        "bergamo": [25, 160, 175],
+        "turin": [26, 0, 31],
+    }
+    host_cpu_model = None
+    for platform, values in dict_cpu.items():
+        if values[0] == family_id:
+            if model_id >= values[1] and model_id <= values[2]:
+                host_cpu_model = platform
+    if not host_cpu_model:
+        test.cancel("Unsupported platform. Requires milan or above.")
+    test.log.info("Detected platform: %s", host_cpu_model)
 
     snp_module_path = params["snp_module_path"]
     if os.path.exists(snp_module_path):
@@ -47,18 +58,29 @@ def run(test, params, env):
         params["mem"] = MemFree // (2 * vm_num)
 
     vms = params.objects("vms")
+    vms_queue = []
+
+    # Create all VMs concurrently
+    error_context.context("Creating all SNP VMs concurrently", test.log.info)
     for vm_name in vms:
         env_process.preprocess_vm(test, params, env, vm_name)
         vm = env.get_vm(vm_name)
+        vms_queue.append(vm)
         vm.create()
+        test.log.info("Created SNP VM: %s", vm_name)
+
+    # Verify and test all VMs concurrently
+    error_context.context("Testing all SNP VMs concurrently", test.log.info)
+    for vm in vms_queue:
         vm.verify_alive()
-        session = vm.wait_for_login(timeout=timeout)
-        verify_dmesg()
         guest_check_cmd = params["snp_guest_check"]
+        session = None
         try:
+            session = vm.wait_for_login(timeout=timeout)
+            verify_dmesg()
             session.cmd_output(guest_check_cmd, timeout=240)
         except Exception as e:
-            test.fail("Guest snp verify fail: %s" % str(e))
+            test.fail("Guest snp verify fail for VM %s: %s" % (vm.name, str(e)))
         else:
             # Verify attestation
             error_context.context("Start to do attestation", test.log.info)
@@ -76,7 +98,8 @@ def run(test, params, env):
             guest_cmd = guest_cmd + " " + host_cpu_model
             s = session.cmd_status(guest_cmd, timeout=360)
             if s:
-                test.fail("Guest script error")
+                test.fail("Guest script error for VM: %s" % vm.name)
         finally:
-            session.close()
+            if session:
+                session.close()
             vm.destroy()

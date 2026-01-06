@@ -30,7 +30,7 @@ def run(test, params, env):
     error_context.context("Try to log into guest", test.log.info)
     session = vm.wait_for_login()
     if params["os_type"] == "linux":
-        if params["os_variant"] != "rhel6":
+        if not params["os_variant"].startswith("rhel6"):
             check_cpu_flags(params, flag, test, session)
         check_clock = params["check_clock"]
         check_clock_out = session.cmd_status(check_clock)

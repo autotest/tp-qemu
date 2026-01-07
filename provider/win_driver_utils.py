@@ -60,6 +60,10 @@ driver_info_dict = {
         "hwid": r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
         "device_name": "VirtIO Viomem Driver",
     },
+    "viosock": {
+        "hwid": r'"PCI\VEN_1AF4&DEV_1053" "PCI\VEN_1AF4&DEV_1012"',
+        "device_name": "VirtIO Socket Driver",
+    },
 }
 
 

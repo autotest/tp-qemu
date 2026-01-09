@@ -427,7 +427,8 @@ class QemuGuestAgentTest(BaseVirtTest):
                 session.cmd("setenforce 1")
 
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
-            self.gagent_create(params, self.vm, *args)
+            if args[0] != "none":
+                self.gagent_create(params, self.vm, *args)
 
     def run_once(self, test, params, env):
         BaseVirtTest.run_once(self, test, params, env)
@@ -446,6 +447,64 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
     def gagent_check_install(self, test, params, env):
         pass
+
+    @error_context.context_aware
+    def gagent_check_install_no_device(self, test, params, env):
+        """
+        Check if qemu-ga can be installed without virtio-serial device.
+        """
+        if not self.vm:
+            self.vm = self.env.get_vm(params["main_vm"])
+            self.vm.verify_alive()
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+
+        # Uninstall if already installed (cleanup from previous runs or base image)
+        if self._check_ga_pkg(session, params.get("gagent_pkg_check_cmd")):
+            self.gagent_uninstall(session, self.vm)
+
+        LOG_JOB.info(
+            "Check whether qemu-ga could be installed and running successfully"
+            " without virtio-serial device."
+        )
+        qemu_ga_pkg = params["qemu_ga_pkg"]
+        install_cmd_fmt = params["gagent_install_cmd"]
+
+        if hasattr(self, "get_qga_pkg_path"):
+            msi_path = self.get_qga_pkg_path(
+                qemu_ga_pkg, test, session, params, self.vm
+            )
+        else:
+            gagent_guest_dir = params.get("gagent_guest_dir")
+            if not gagent_guest_dir:
+                session.close()
+                test.fail("Missing gagent_guest_dir and get_qga_pkg_path not found")
+            msi_path = "%s\\%s" % (gagent_guest_dir.rstrip("\\"), qemu_ga_pkg)
+
+        try:
+            install_cmd = install_cmd_fmt % msi_path
+        except TypeError:
+            install_cmd = "%s %s" % (install_cmd_fmt, msi_path)
+
+        error_context.context(
+            "Install qemu-guest-agent pkg in guest using command: %s" % install_cmd,
+            LOG_JOB.info,
+        )
+        s_inst, o_inst = session.cmd_status_output(install_cmd)
+
+        if s_inst != 0:
+            session.close()
+            self.test.fail(
+                "qemu-guest-agent install failed, the detailed info:\n%s." % o_inst
+            )
+
+        if not self._check_ga_service(session, params.get("gagent_status_cmd")):
+            session.close()
+            test.fail(
+                "qemu-ga service is not running after installation "
+                "without virtio-serial device"
+            )
 
     @error_context.context_aware
     def gagent_check_install_uninstall(self, test, params, env):
@@ -4364,9 +4423,9 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         _result_check(machine_type_qga, machine_type_guest)
 
     def run_once(self, test, params, env):
-        QemuGuestAgentTest.run_once(self, test, params, env)
-
         gagent_check_type = self.params["gagent_check_type"]
+        if gagent_check_type != "install_no_device":
+            QemuGuestAgentTest.run_once(self, test, params, env)
         chk_type = "gagent_check_%s" % gagent_check_type
         if hasattr(self, chk_type):
             func = getattr(self, chk_type)
@@ -4616,7 +4675,8 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             if params["check_vioser"] == "yes":
                 self._check_serial_driver(test, params, env)
             args = [params.get("gagent_serial_type"), params.get("gagent_name")]
-            self.gagent_create(params, self.vm, *args)
+            if args[0] != "none":
+                self.gagent_create(params, self.vm, *args)
 
     @error_context.context_aware
     def gagent_check_get_disks(self, test, params, env):

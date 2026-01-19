@@ -44,7 +44,7 @@ def run(test, params, env):
     # virtio-win-1.9.xx
     iso_label_ver = re.findall(ver_pattern, iso_label_name, re.I)[0]
 
-    vol_virtio_key = "VolumeName like '%virtio-win%'"
+    vol_virtio_key = "VolumeName='virtio-win*'"
     vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
     installer_ver = session.cmd_output(params["installer_chk_cmd"] % vol_virtio).strip()
     if not pkg_ver == iso_ver == iso_label_ver == installer_ver:

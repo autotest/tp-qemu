@@ -200,7 +200,11 @@ def _get_drive_path(session, params, image):
     extra_params = image_params["blk_extra_params"]
     serial = re.search(r"(serial|wwn)=(\w+)", extra_params, re.M).group(2)
     if os_type == "windows":
-        cmd = "wmic diskdrive where SerialNumber='%s' get Index,Name"
+        cmd = (
+            'powshell "Get-CimInstance Win32_DiskDrive'
+            " | Where-Object {$_.SerialNumber -eq %s}"
+            ' | Select-Object Index, Name"'
+        )
         disks = session.cmd_output(cmd % serial)
         info = disks.splitlines()
         if len(info) > 1:

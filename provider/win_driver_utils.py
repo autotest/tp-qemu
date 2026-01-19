@@ -12,7 +12,7 @@ import time
 import aexpect
 from virttest import data_dir, error_context, utils_misc, utils_test
 from virttest.utils_version import VersionInterval
-from virttest.utils_windows import system, virtio_win, wmic
+from virttest.utils_windows import system, virtio_win
 
 LOG_JOB = logging.getLogger("avocado.test")
 
@@ -64,14 +64,32 @@ driver_info_dict = {
 
 
 def _pnpdrv_info(session, name_pattern, props=None):
-    """Get the driver props eg: InfName"""
-    cmd = wmic.make_query(
-        "path win32_pnpsigneddriver",
-        "DeviceName like '%s'" % name_pattern,
-        props=props,
-        get_swch=wmic.FMT_TYPE_LIST,
+    """
+    Get the driver props eg: InfName
+
+    :param session: The guest session object.
+    :param name_pattern: String with the device name
+    :param props: Dict witj the properties list
+    """
+    cmd = (
+        'powershell "Get-CimInstance Win32_PnPSignedDriver'
+        " | Where-Object { $_.DeviceName -like '%s' }"
+        ' | Select-Object %s | Format-List *"'
     )
-    return wmic.parse_list(session.cmd(cmd, timeout=QUERY_TIMEOUT))
+    cmd = cmd % (name_pattern, ",".join(props))
+    output = session.cmd_output(cmd, timeout=QUERY_TIMEOUT)
+    out = []
+    for para in re.split("(?:\r?\n){2,}", output.strip()):
+        keys, vals = [], []
+        for line in para.splitlines():
+            key, val = line.split(":", 1)
+            keys.append(key.strip())
+            vals.append(val.strip())
+        if len(keys) == 1:
+            out.append(vals[0])
+        else:
+            out.append(dict(zip(keys, vals)))
+    return out
 
 
 def uninstall_driver(session, test, devcon_path, driver_name, device_name, device_hwid):
@@ -302,7 +320,7 @@ def copy_file_to_samepath(session, test, params):
     """
     LOG_JOB.info("Copy autoit scripts and virtio-win-guest-tools.exe to the same path.")
     dst_path = r"C:\\"
-    vol_virtio_key = "VolumeName like '%virtio-win%'"
+    vol_virtio_key = "VolumeName='virtio-win*'"
     vol_virtio = utils_misc.get_win_disk_vol(session, vol_virtio_key)
 
     installer_path = r"%s:\%s" % (vol_virtio, "virtio-win-guest-tools.exe")

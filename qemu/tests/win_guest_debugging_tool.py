@@ -38,7 +38,7 @@ class WinDebugToolTest:
                 self._open_sessions.append(self.session)
             return self.session
         self.vm.verify_alive()
-        timeout = int(self.params.get("login_timeout", 360))
+        timeout = self.params.get_numeric("login_timeout", 360)
         session = self.vm.wait_for_login(timeout=timeout)
         self._open_sessions.append(session)
         if new:
@@ -82,6 +82,14 @@ class WinDebugToolTest:
         error_context.context("Creating temporary work directory.", LOG_JOB.info)
         self.session.cmd_output(self.params["cmd_create_dir"] % self.tmp_dir)
         self.session.cmd(f'cd "{self.tmp_dir}"')
+
+        # Disable IE Enhanced Security Configuration for Win2016 if configured
+        if self.params.get("cmd_disable_ie_esc_admin"):
+            error_context.context(
+                "Disabling IE Enhanced Security Configuration.", LOG_JOB.info
+            )
+            self.session.cmd(self.params["cmd_disable_ie_esc_admin"])
+            self.session.cmd(self.params["cmd_disable_ie_esc_user"])
 
     def _run_script_and_get_paths(self, extra_args=""):
         """

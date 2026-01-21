@@ -32,17 +32,17 @@ def run(test, params, env):
     host_path = "/tmp/file-%s" % utils_misc.generate_random_string(6)
     host_path_returned = "%s-returned" % host_path
     guest_path = params.get("guest_path", "/tmp/file")
-    file_size = params.get("file_size", "500")
+    file_size = params.get("file_size", "1000")
     transfer_timeout = int(params.get("transfer_timeout", "240"))
     if mig_protocol == "exec":
         mig_file = os.path.join(
             test.tmpdir, "tmp-%s" % utils_misc.generate_random_string(8)
         )
-
+    cnt = 0
     try:
-        process.run("dd if=/dev/urandom of=%s bs=1M count=%s" % (host_path, file_size))
+        process.run("dd if=/dev/zero of=%s bs=1M count=%s" % (host_path, file_size))
 
-        def run_and_migrate(bg):
+        def run_and_migrate(bg, cnt):
             bg.start()
             try:
                 while bg.is_alive():
@@ -54,14 +54,20 @@ def run(test, params, env):
                     if mig_protocol == "exec" and migration_exec_cmd_src:
                         migration_exec_cmd_src %= mig_file  # pylint: disable=E0606
                         migration_exec_cmd_dst %= mig_file
+                    if cnt % 2 == 0:
+                        dest_host = params.get("mig_dest_node")
+                    else:
+                        dest_host = params.get("vm_node")
                     vm.migrate(
                         mig_timeout,
                         mig_protocol,
                         mig_cancel_delay,
+                        dest_host=dest_host,
                         env=env,
                         migration_exec_cmd_src=migration_exec_cmd_src,
                         migration_exec_cmd_dst=migration_exec_cmd_dst,
                     )
+                    cnt += 1
             except Exception:
                 # If something bad happened in the main thread, ignore
                 # exceptions raised in the background thread
@@ -69,6 +75,7 @@ def run(test, params, env):
                 raise
             else:
                 bg.join()
+                return cnt
 
         error_context.context(
             "transferring file to guest while migrating", test.log.info
@@ -78,7 +85,7 @@ def run(test, params, env):
             (host_path, guest_path),
             dict(verbose=True, timeout=transfer_timeout),
         )
-        run_and_migrate(bg)
+        cnt = run_and_migrate(bg, cnt)
 
         error_context.context(
             "transferring file back to host while migrating", test.log.info
@@ -88,7 +95,7 @@ def run(test, params, env):
             (guest_path, host_path_returned),
             dict(verbose=True, timeout=transfer_timeout),
         )
-        run_and_migrate(bg)
+        run_and_migrate(bg, cnt)
 
         # Make sure the returned file is identical to the original one
         error_context.context("comparing hashes", test.log.info)

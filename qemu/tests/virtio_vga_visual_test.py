@@ -919,6 +919,90 @@ class VirtioVgaVisualTest:
         except Exception:
             return False
 
+    def _get_windows_version_dirname(self):
+        """Get Windows version directory name for virtio-win ISO paths."""
+        caption = self.session.cmd_output(
+            "wmic os get Caption /format:list", timeout=60
+        )
+        LOG_JOB.debug("Windows Caption: %s", caption)
+
+        version_map_str = self.params.get("win_version_map", "")
+        version_map = {}
+        for mapping in version_map_str.split():
+            if ":" in mapping:
+                key, value = mapping.split(":", 1)
+                version_map[key] = value
+
+        for version_key, dirname in version_map.items():
+            if version_key in caption:
+                LOG_JOB.debug("Matched version '%s' -> '%s'", version_key, dirname)
+                return dirname
+
+        self.test.error("Unsupported Windows version: %s" % caption)
+
+    def _is_prewhql_package(self):
+        """Check if virtio-win package is prewhql or whql."""
+        cdrom_virtio = self.params.get("cdrom_virtio", "")
+        is_prewhql = "prewhql" in cdrom_virtio.lower()
+        LOG_JOB.info("Package type: %s", "prewhql" if is_prewhql else "whql")
+        return is_prewhql
+
+    def _get_viogpudo_driver_paths(self):
+        """Get viogpudo driver file paths from virtio-win ISO."""
+        from virttest.utils_windows import virtio_win
+
+        driver_name = self.params.get("driver_name")
+        media_type = self.params.get("virtio_win_media_type")
+
+        try:
+            get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
+            get_arch_dirname = getattr(virtio_win, "arch_dirname_%s" % media_type)
+        except AttributeError:
+            self.test.error("Not supported virtio win media type '%s'" % media_type)
+
+        viowin_ltr = get_drive_letter(self.session)
+        if not viowin_ltr:
+            self.test.error("Could not find virtio-win drive in guest")
+
+        guest_arch = get_arch_dirname(self.session)
+        if not guest_arch:
+            self.test.error("Could not get architecture dirname")
+
+        win_version_dir = self._get_windows_version_dirname()
+        base_path = "%s\\%s\\%s\\%s" % (
+            viowin_ltr,
+            driver_name,
+            win_version_dir,
+            guest_arch,
+        )
+
+        cat_path = "%s\\%s.cat" % (base_path, driver_name)
+        sys_path = "%s\\%s.sys" % (base_path, driver_name)
+        inf_path = "%s\\%s.inf" % (base_path, driver_name)
+
+        LOG_JOB.info("Driver base path: %s", base_path)
+        return cat_path, sys_path, inf_path
+
+    def _verify_signtool_output(self, output, file_path):
+        """Verify SignTool output contains success indicators."""
+        success_pattern = self.params.get("signtool_success_pattern")
+        warnings_pattern = self.params.get("signtool_warnings_pattern")
+        errors_pattern = self.params.get("signtool_errors_pattern")
+
+        if not re.search(success_pattern, output):
+            LOG_JOB.error("SignTool failed for %s: no success indicator", file_path)
+            return False
+
+        if not re.search(warnings_pattern, output):
+            LOG_JOB.warning("SignTool has warnings for %s", file_path)
+
+        if not re.search(errors_pattern, output):
+            LOG_JOB.error("SignTool has errors for %s", file_path)
+            return False
+
+        LOG_JOB.info("SignTool verification passed for %s", file_path)
+        return True
+
     def _reboot_if_win2016(self, context_msg=""):
         """Reboot VM if Windows 2016 (required for driver operations)."""
         if not self._is_win2016():
@@ -1368,14 +1452,71 @@ class VirtioVgaVisualTest:
 
     @error_context.context_aware
     def run_check_driver_signature_signtool(self):
-        self.test.fail(
-            "Test action 'check_driver_signature_signtool' is not yet implemented."
+        """Verify viogpudo driver signature using SignTool.exe."""
+        self._ensure_driver_installed()
+
+        error_context.context("Locating SignTool utility", LOG_JOB.info)
+        signtool_path = self._resolve_winutils_path(self.params.get("signtool_path"))
+
+        error_context.context("Locating driver files", LOG_JOB.info)
+        cat_path, sys_path, inf_path = self._get_viogpudo_driver_paths()
+
+        is_prewhql = self._is_prewhql_package()
+        verify_option = self.params.get(
+            "signtool_verify_option_prewhql"
+            if is_prewhql
+            else "signtool_verify_option_whql"
+        )
+
+        cmd_template = self.params.get("signtool_verify_cmd")
+        timeout = int(self.params.get("signature_verify_timeout", 120))
+
+        for file_path in [sys_path, inf_path]:
+            error_context.context("Verifying signature: %s" % file_path, LOG_JOB.info)
+            verify_cmd = cmd_template % (
+                signtool_path,
+                verify_option,
+                cat_path,
+                file_path,
+            )
+            status, output = self.session.cmd_status_output(verify_cmd, timeout=timeout)
+
+            if status != 0 or not self._verify_signtool_output(output, file_path):
+                self.test.fail(
+                    "Signature verification failed for %s\n"
+                    "Command: %s\nOutput:\n%s" % (file_path, verify_cmd, output)
+                )
+
+        use_vnc = self.params.get("use_vnc_screenshot", "yes") == "yes"
+        self._verify_basic_interaction(
+            suffix="after_signature_check", use_vnc_screenshot=use_vnc
         )
 
     @error_context.context_aware
     def run_check_driver_signature_sigverif(self):
-        self.test.fail(
-            "Test action 'check_driver_signature_sigverif' is not yet implemented."
+        """Verify driver signature using sigverif with AutoIT script."""
+        self._ensure_driver_installed()
+
+        error_context.context("Locating AutoIT and sigverif", LOG_JOB.info)
+        autoit_exe = self._resolve_winutils_path(self.params.get("autoit_exe"))
+        sigverif_script = self._resolve_winutils_path(
+            self.params.get("sigverif_script")
+        )
+
+        error_context.context("Executing sigverif verification", LOG_JOB.info)
+        sigverif_cmd = self.params.get("sigverif_cmd") % (autoit_exe, sigverif_script)
+        timeout = int(self.params.get("sigverif_timeout", 120))
+        status, output = self.session.cmd_status_output(sigverif_cmd, timeout=timeout)
+
+        if status != 0:
+            self.test.fail(
+                "Sigverif failed with exit code %d\n"
+                "Command: %s\nOutput:\n%s" % (status, sigverif_cmd, output)
+            )
+
+        use_vnc = self.params.get("use_vnc_screenshot", "yes") == "yes"
+        self._verify_basic_interaction(
+            suffix="after_sigverif_check", use_vnc_screenshot=use_vnc
         )
 
     @error_context.context_aware

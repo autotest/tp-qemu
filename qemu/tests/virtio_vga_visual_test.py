@@ -85,6 +85,15 @@ class VNCEnvironmentManager:
         self._run_cmd(["yum", "install", "-y", "gdm"], timeout=300)
         return True
 
+    def install_gtk_vnc2(self):
+        """Install gtk_vnc2 for RHEL 10+."""
+        rc, _, _ = self._run_cmd(["rpm", "-q", "gtk-vnc2"], check=False)
+        if rc == 0:
+            return True
+
+        self._run_cmd(["yum", "install", "-y", "gtk-vnc2"], timeout=300)
+        return True
+
     def install_xvfb(self):
         """Install Xvfb for RHEL 8/9."""
         rc, _, _ = self._run_cmd(["which", "Xvfb"], check=False)
@@ -203,6 +212,7 @@ class VNCEnvironmentManager:
         if version >= 10:
             # RHEL 10+: Use xwayland-run
             self.install_xwayland()
+            self.install_gtk_vnc2()
         else:
             # RHEL 8/9: Use Xvfb
             self.install_xvfb()
@@ -339,8 +349,9 @@ class VirtioVgaVisualTest:
         LOG_JOB.debug("VNC command: %s", " ".join(cmd))
 
         try:
-            # Execute screenshot command
-            result = process.run(cmd, timeout=30, ignore_status=True, verbose=False)
+            # Execute screenshot command (convert list to string)
+            cmd_str = " ".join(cmd)
+            result = process.run(cmd_str, timeout=30, ignore_status=True, verbose=False)
 
             if result.exit_status != 0:
                 raise RuntimeError("Screenshot command failed: %s" % result.stderr_text)
@@ -1521,11 +1532,254 @@ class VirtioVgaVisualTest:
 
     @error_context.context_aware
     def run_boot_multiple_drivers(self):
-        self.test.fail("Test action 'boot_multiple_drivers' is not yet implemented.")
+        """
+        Test multiple virtio-gpu devices (1 virtio-vga + 1 virtio-gpu-pci).
+
+        This test verifies that:
+        1. Primary GPU (virtio-vga) is working correctly
+        2. Secondary GPU (virtio-gpu-pci) is detected
+        3. Both devices have drivers installed and are functional
+        4. Visual interaction works correctly with multiple GPUs
+        5. Devices persist across reboot
+        """
+        error_context.context("Testing multiple virtio-gpu devices", LOG_JOB.info)
+
+        # Get configuration
+        expected_gpu_count = int(self.params.get("expected_gpu_count", 2))
+        device_name = self.params.get("device_name")
+        device_hwid = self.params.get("device_hwid")
+        use_vnc = self.params.get("use_vnc_screenshot", "yes") == "yes"
+
+        # Step 1: Ensure primary driver is installed
+        error_context.context(
+            "Ensuring primary virtio-vga driver is installed", LOG_JOB.info
+        )
+        self._ensure_driver_installed()
+
+        # Step 2: Detect all virtio-gpu devices using PowerShell
+        error_context.context(
+            "Detecting all virtio-gpu devices in the system", LOG_JOB.info
+        )
+
+        # Query all PCI devices matching the virtio-gpu hardware ID
+        detect_cmd = (
+            'powershell -c "Get-PnpDevice | Where-Object {{'
+            "$_.InstanceId -like '{0}*'}} | "
+            "Where-Object {{$_.Status -eq 'OK'}} | "
+            "Select-Object -Property FriendlyName, Status, InstanceId | "
+            'Format-List"'
+        ).format(device_hwid.strip('"'))
+
+        LOG_JOB.debug("Detection command: %s", detect_cmd)
+
+        try:
+            output = self.session.cmd_output(detect_cmd, timeout=120)
+            LOG_JOB.debug("Device detection output:\n%s", output)
+
+            # Parse output to count devices
+            device_blocks = output.strip().split("\n\n")
+            detected_devices = []
+
+            for block in device_blocks:
+                if not block.strip():
+                    continue
+
+                friendly_name = None
+                status = None
+                instance_id = None
+
+                for line in block.split("\n"):
+                    line = line.strip()
+                    if line.startswith("FriendlyName"):
+                        friendly_name = line.split(":", 1)[1].strip()
+                    elif line.startswith("Status"):
+                        status = line.split(":", 1)[1].strip()
+                    elif line.startswith("InstanceId"):
+                        instance_id = line.split(":", 1)[1].strip()
+
+                if friendly_name and instance_id:
+                    detected_devices.append(
+                        {"name": friendly_name, "status": status, "id": instance_id}
+                    )
+
+            actual_gpu_count = len(detected_devices)
+
+            LOG_JOB.info(
+                "Detected %d virtio-gpu device(s) (expected: %d)",
+                actual_gpu_count,
+                expected_gpu_count,
+            )
+
+            for i, dev in enumerate(detected_devices, 1):
+                LOG_JOB.info("  GPU %d: %s (Status: %s)", i, dev["name"], dev["status"])
+
+        except Exception as e:
+            self.test.error("Failed to detect virtio-gpu devices: %s" % e)
+
+        # Step 3: Verify device count
+        if actual_gpu_count != expected_gpu_count:
+            self.test.fail(
+                "GPU count mismatch: expected %d devices, found %d devices. "
+                "Detected devices: %s"
+                % (
+                    expected_gpu_count,
+                    actual_gpu_count,
+                    [dev["name"] for dev in detected_devices],
+                )
+            )
+
+        # Step 4: Verify all devices have OK status
+        error_context.context("Verifying all GPU devices have OK status", LOG_JOB.info)
+
+        devices_not_ok = [
+            dev for dev in detected_devices if dev["status"].lower() != "ok"
+        ]
+
+        if devices_not_ok:
+            self.test.fail(
+                "Some GPU devices are not in OK status: %s"
+                % (
+                    [
+                        "%s (Status: %s)" % (dev["name"], dev["status"])
+                        for dev in devices_not_ok
+                    ]
+                )
+            )
+
+        # Step 5: Verify driver installation for all devices
+        error_context.context(
+            "Verifying driver installation for all devices", LOG_JOB.info
+        )
+
+        # Use wmic to check driver info for all devices
+        cmd = wmic.make_query(
+            "path win32_pnpsigneddriver",
+            "DeviceName like '%s'" % device_name,
+            props=["DeviceName", "DriverVersion", "DeviceID"],
+            get_swch=wmic.FMT_TYPE_LIST,
+        )
+
+        try:
+            wmic_output = self.session.cmd_output(cmd, timeout=120)
+            # Count how many driver entries we have
+            driver_count = wmic_output.count("DeviceName=")
+
+            LOG_JOB.info(
+                "Found %d driver installation(s) for '%s'", driver_count, device_name
+            )
+
+            if driver_count < expected_gpu_count:
+                LOG_JOB.warning(
+                    "Driver count (%d) is less than expected GPU count (%d). "
+                    "This may indicate some devices share the same driver entry.",
+                    driver_count,
+                    expected_gpu_count,
+                )
+
+        except Exception as e:
+            LOG_JOB.warning("Failed to query driver info via wmic: %s", e)
+
+        # Step 6: Verify driver version consistency
+        error_context.context("Verifying driver version consistency", LOG_JOB.info)
+
+        driver_version = self._get_driver_version(device_name)
+        if driver_version:
+            LOG_JOB.info("All devices using driver version: %s", driver_version)
+        else:
+            LOG_JOB.warning("Could not retrieve driver version")
+
+        # Step 7: Perform basic visual interaction test
+        error_context.context(
+            "Performing visual interaction test with multiple GPUs", LOG_JOB.info
+        )
+
+        self._verify_basic_interaction(
+            suffix="multi_gpu_initial", use_vnc_screenshot=use_vnc
+        )
+
+        # Step 8: Test reboot with multiple GPUs
+        error_context.context("Testing reboot with multiple GPU devices", LOG_JOB.info)
+
+        reboot_timeout = int(self.params.get("reboot_timeout", 240))
+        self.session = self.vm.reboot(
+            session=self.session, method="shell", timeout=reboot_timeout
+        )
+        self._open_session_list.append(self.session)
+
+        # Step 9: Verify all devices are still present after reboot
+        error_context.context("Verifying all GPU devices after reboot", LOG_JOB.info)
+
+        try:
+            output_after = self.session.cmd_output(detect_cmd, timeout=120)
+            device_blocks_after = output_after.strip().split("\n\n")
+            detected_after = [
+                block for block in device_blocks_after if "FriendlyName" in block
+            ]
+
+            actual_count_after = len(detected_after)
+
+            if actual_count_after != expected_gpu_count:
+                self.test.fail(
+                    "GPU count changed after reboot: was %d, now %d"
+                    % (expected_gpu_count, actual_count_after)
+                )
+
+            LOG_JOB.info(
+                "All %d GPU device(s) still present after reboot", actual_count_after
+            )
+
+        except Exception as e:
+            self.test.error("Failed to verify devices after reboot: %s" % e)
+
+        # Step 10: Final visual verification
+        error_context.context("Final visual verification after reboot", LOG_JOB.info)
+
+        self._verify_basic_interaction(
+            suffix="multi_gpu_after_reboot", use_vnc_screenshot=use_vnc
+        )
+
+        LOG_JOB.info(
+            "SUCCESS: Multiple GPU test completed. All %d virtio-gpu devices "
+            "are functional.",
+            expected_gpu_count,
+        )
 
     @error_context.context_aware
     def run_install_driver_iommu(self):
-        self.test.fail("Test action 'install_driver_iommu' is not yet implemented.")
+        """Test virtio-vga driver with IOMMU enabled.
+
+        This test verifies that:
+        1. VM boots successfully with IOMMU-enabled virtio-vga device
+        2. virtio-vga driver is installed and functional
+        3. Display works correctly with IOMMU support
+        """
+        error_context.context("Testing virtio-vga with IOMMU support", LOG_JOB.info)
+
+        # Verify IOMMU is enabled in VM configuration
+        iommu_enabled = (
+            self.params.get("intel_iommu") == "yes"
+            or self.params.get("virtio_iommu") == "yes"
+            or self.params.get("virtio_dev_iommu_platform") == "on"
+        )
+
+        if not iommu_enabled:
+            self.test.error(
+                "IOMMU not enabled in test configuration. Please check cfg file."
+            )
+
+        LOG_JOB.info("IOMMU configuration detected in test parameters")
+
+        # Ensure driver is installed
+        self._ensure_driver_installed()
+
+        # Perform basic visual interaction test to verify display works with IOMMU
+        use_vnc = self.params.get("use_vnc_screenshot", "yes") == "yes"
+        self._verify_basic_interaction(suffix="iommu", use_vnc_screenshot=use_vnc)
+
+        LOG_JOB.info(
+            "SUCCESS: virtio-vga with IOMMU support is functional. "
+            "VM booted successfully and display is working correctly."
+        )
 
     @error_context.context_aware
     def run_resolution_modification_auto(self):

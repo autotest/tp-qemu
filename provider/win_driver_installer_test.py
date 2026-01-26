@@ -28,6 +28,7 @@ driver_name_list = [
     "vioinput",
     "fwcfg",
     "viomem",
+    "viogpudo",
 ]
 
 device_hwid_list = [
@@ -42,6 +43,7 @@ device_hwid_list = [
     '"PCI\\VEN_1AF4&DEV_1052"',
     '"ACPI\\VEN_QEMU&DEV_0002"',
     r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
+    r'"PCI\VEN_1AF4&DEV_1050&SUBSYS_11001AF4&REV_01"',
 ]
 
 device_name_list = [
@@ -56,6 +58,7 @@ device_name_list = [
     "VirtIO Input Driver",
     "QEMU FwCfg Device",
     "VirtIO Viomem Driver",
+    "Red Hat VirtIO GPU DOD controller",
 ]
 
 
@@ -449,3 +452,28 @@ def viomem_test(test, params, vm):
             virtio_mem_utils.check_memory_devices(
                 device_id, requested_size, threshold, vm, test
             )
+
+
+def viogpudo_test(test, params, vm):
+    """
+    viogpudo driver function test.
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    """
+    session = vm.wait_for_login()
+    error_context.context("Check viogpudo device status", LOG_JOB.info)
+
+    # Check if the device is working properly
+    cmd = params["viogpudo_status_check_cmd"]
+    output = session.cmd_output(cmd).strip()
+    if "OK" not in output:
+        test.fail("viogpudo device status is not OK: %s" % output)
+
+    # Check if resolution is detected (indicates driver is active)
+    cmd = params["viogpudo_resolution_check_cmd"]
+    output = session.cmd_output(cmd).strip()
+    # Output usually contains the number, e.g. "1024"
+    if not any(char.isdigit() for char in output):
+        test.warn("Could not retrieve resolution for viogpudo device: %s" % output)

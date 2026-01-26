@@ -454,7 +454,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         repeats = int(params.get("repeat_times", 1))
         LOG_JOB.info("Repeat install/uninstall qemu-ga pkg for %s times", repeats)
@@ -481,7 +481,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         repeats = int(params.get("repeat_times", 1))
         LOG_JOB.info("Repeat stop/restart qemu-ga service for %s times", repeats)
@@ -509,7 +509,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context("Check guest agent command 'guest-sync'", LOG_JOB.info)
         self.gagent.sync()
@@ -524,7 +524,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         session = self._get_session(params, None)
@@ -662,7 +662,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context(
             "Check guest agent command 'guest-sync-delimited'", LOG_JOB.info
@@ -682,7 +682,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Execute "guest-set-user-password" command to guest agent
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         session = self._get_session(params, self.vm)
@@ -726,7 +726,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
@@ -775,7 +775,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Execute "guest-set-vcpus" command to guest agent
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context("get the cpu number of the testing guest")
         vcpus_info = self.gagent.get_vcpus()
@@ -818,7 +818,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -956,7 +956,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Execute "guest-get-time" command to guest agent
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         timeout = float(params.get("login_timeout", 240))
         session = self.vm.wait_for_login(timeout=timeout)
@@ -993,7 +993,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         timeout = float(params.get("login_timeout", 240))
         session = self.vm.wait_for_login(timeout=timeout)
@@ -1081,7 +1081,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def time_drift():
@@ -1170,7 +1170,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         timeout = float(params.get("login_timeout", 240))
@@ -1214,7 +1214,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Execute "guest-fstrim" command to guest agent
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment.
 
         """
 
@@ -1366,7 +1366,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         session = self._get_session(params, None)
@@ -1444,7 +1444,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def ssh_key_test(operation, guest_name, *keys, **kwargs):
@@ -1599,7 +1599,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
@@ -1643,7 +1643,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
@@ -1729,7 +1729,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def get_interface(ret_list, mac_addr):
@@ -1902,7 +1902,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         import ipaddress
@@ -2073,13 +2073,173 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
             session.close()
 
     @error_context.context_aware
+    def gagent_check_get_load(self, test, params, env):
+        """
+        Test guest-get-load command functionality.
+
+        Steps:
+        1) Get initial load values and verify qga/guest match
+        2) Start stress test and verify load increases
+        3) Stop stress test and verify load decreases
+
+        :param test: kvm test object
+        :param params: Dictionary with test parameters
+        :param env: Dictionary with the test environment
+        """
+
+        def _get_load_stats(session, get_guest=True):
+            """
+            Get load statistics from either guest OS or QGA.
+            Returns tuple of (1min, 5min, 15min) load values.
+            """
+            try:
+                if get_guest:
+                    out = session.cmd_output(params["cmd_get_load"])
+                    loads = out.strip().split()[:3]
+                else:
+                    res = self.gagent.get_load()
+                    keys = ("load1m", "load5m", "load15m")
+                    loads = [res[k] for k in keys]
+                return tuple(round(float(x), 2) for x in loads)
+            except (IndexError, KeyError, ValueError) as e:
+                source = "guest" if get_guest else "QGA"
+                test.error(f"Failed to get {source} load stats: {e}")
+
+        def _verify_load_values(qga_vals, guest_vals, check_type="match"):
+            """
+            Compare load values between QGA and guest OS.
+            Also verifies if values changed as expected.
+            """
+            errors = []
+            periods = ["1-minute", "5-minute", "15-minute"]
+
+            for period, qga, guest in zip(periods, qga_vals, guest_vals):
+                if abs(qga - guest) > 0.5:
+                    errors.append(
+                        f"{period} load mismatch: guest={guest:.2f}, qga={qga:.2f}"
+                    )
+
+            # Only check load1m for increase/decrease
+            if check_type != "match" and prev_values:
+                qga_1m = qga_vals[0]
+                guest_1m = guest_vals[0]
+                prev_qga_1m = prev_values["qga"][0]
+                prev_guest_1m = prev_values["guest"][0]
+
+                if check_type == "increase":
+                    if qga_1m <= prev_qga_1m or guest_1m <= prev_guest_1m:
+                        errors.append(
+                            "1-minute load did not increase as expected:\n"
+                            f"QGA: {prev_qga_1m:.2f} -> {qga_1m:.2f}\n"
+                            f"Guest: {prev_guest_1m:.2f} -> {guest_1m:.2f}"
+                        )
+                elif check_type == "decrease":
+                    if qga_1m >= prev_qga_1m or guest_1m >= prev_guest_1m:
+                        errors.append(
+                            "1-minute load did not decrease as expected:\n"
+                            f"QGA: {prev_qga_1m:.2f} -> {qga_1m:.2f}\n"
+                            f"Guest: {prev_guest_1m:.2f} -> {guest_1m:.2f}"
+                        )
+
+            return errors
+
+        def _log_load_values(guest_vals, qga_vals, phase):
+            """Log load values in a consistent format"""
+            LOG_JOB.info(
+                "%s load averages:\nGuest OS: %s\nQGA: %s",
+                phase,
+                [f"{x:.2f}" for x in guest_vals],
+                [f"{x:.2f}" for x in qga_vals],
+            )
+
+        session = self._get_session(params, self.vm)
+        self._open_session_list.append(session)
+        prev_values = None
+
+        if params.get("os_type") == "windows":
+            error_context.context("Get load info for Windows", LOG_JOB.info)
+            try:
+                # Get initial load values
+                load_info = self.gagent.get_load()
+                # Check if all required fields exist
+                for key in ["load1m", "load5m", "load15m"]:
+                    if key not in load_info:
+                        test.fail(f"Missing {key} in guest-get-load return value")
+                initial_load = load_info["load1m"]
+                LOG_JOB.info("Initial load info from guest-agent: %s", load_info)
+
+                # Start CPU stress test
+                error_context.context("Start CPU stress test", LOG_JOB.info)
+                session.cmd(params["cmd_run_stress"])
+                time.sleep(10)
+
+                # Get load values after stress
+                load_info = self.gagent.get_load()
+                stress_load = load_info["load1m"]
+                LOG_JOB.info("Load info after stress: %s", load_info)
+
+                # Verify load value changed
+                if stress_load <= initial_load:
+                    test.fail(
+                        f"Load value did not increase after CPU stress:"
+                        f" before={initial_load}, after={stress_load}"
+                    )
+                LOG_JOB.info(
+                    "Load value increased as expected: before=%s, after=%s",
+                    initial_load,
+                    stress_load,
+                )
+            except guest_agent.VAgentCmdError as e:
+                test.fail(f"guest-get-load command failed: {e}")
+        else:
+            # Initial load check
+            error_context.context("Check initial load average info", LOG_JOB.info)
+            guest_vals = _get_load_stats(session)
+            qga_vals = _get_load_stats(session, False)
+            prev_values = {"guest": guest_vals, "qga": qga_vals}
+
+            _log_load_values(guest_vals, qga_vals, "Initial")
+
+            if errors := _verify_load_values(qga_vals, guest_vals):
+                test.fail("Initial load check failed:\n" + "\n".join(errors))
+
+            # Stress test
+            error_context.context("Starting CPU stress test", LOG_JOB.info)
+            s, o = session.cmd_status_output(params["cmd_install_stressng"])
+            if s != 0:
+                test.error(f"Failed to install stress-ng: {o}")
+            session.cmd(params["cmd_run_stress"])
+            # Give the stress test some runtime
+            time.sleep(25)
+
+            guest_vals = _get_load_stats(session)
+            qga_vals = _get_load_stats(session, False)
+
+            _log_load_values(guest_vals, qga_vals, "Under stress")
+
+            if errors := _verify_load_values(qga_vals, guest_vals, "increase"):
+                test.fail("Stress test load check failed:\n" + "\n".join(errors))
+
+            prev_values = {"guest": guest_vals, "qga": qga_vals}
+
+            # sleep (60) wait for the stress-ng terminated.
+            time.sleep(60)
+            guest_vals = _get_load_stats(session)
+            qga_vals = _get_load_stats(session, False)
+
+            _log_load_values(guest_vals, qga_vals, "After stress")
+
+            if errors := _verify_load_values(qga_vals, guest_vals, "decrease"):
+                test.fail("Post-stress load check failed:\n" + "\n".join(errors))
+
+    @error_context.context_aware
     def gagent_check_reboot_shutdown(self, test, params, env):
         """
         Send "shutdown,reboot" command to guest agent
         after FS freezed
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         vm = env.get_vm(params["main_vm"])
         vm.verify_alive()
@@ -2217,7 +2377,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context(
             "Change guest-file related cmd to white list and get guest file name."
@@ -2273,7 +2433,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment.
         """
         error_context.context(
             "Change guest-file related cmd to white list and get guest file name."
@@ -2330,7 +2490,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def _read_guest_file_with_count(count_num):
@@ -2462,7 +2622,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context(
             "Change guest-file related cmd to white list and get guest file name."
@@ -2511,7 +2671,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         7) recovery the selinux policy
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def file_operation(guest_file, open_mode):
@@ -2894,7 +3054,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environmen.
+        :param env: Dictionary with the test environmen.
         """
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
@@ -2926,7 +3086,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environmen.
+        :param env: Dictionary with the test environmen.
         """
         session = self._get_session(params, self.vm)
         self._open_session_list.append(session)
@@ -3019,7 +3179,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context("Verify if FS is thawed", LOG_JOB.info)
         expect_status = self.gagent.FSFREEZE_STATUS_THAWED
@@ -3041,7 +3201,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         # Since Qemu9.1, the report message changes.
         qga_ver = self.gagent.guest_info()["version"].split(".")
@@ -3075,7 +3235,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         Check guest agent service status after running the init command
         :param test: Kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
         error_context.context("Run init 3 in guest", LOG_JOB.info)
         session = self._get_session(params, self.vm)
@@ -3098,7 +3258,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         def get_new_disk(disks_before_plug, disks_after_plug):
@@ -3205,7 +3365,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, self.vm)
         self.gagent_stop(session, self.vm)
@@ -3261,7 +3421,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         def log_check(action):
@@ -3392,7 +3552,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         def check_value_frontend_open(out, expected):
@@ -3454,7 +3614,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
         error_context.context(
             "Before freeze/thaw the FS, run the iozone test", LOG_JOB.info
@@ -3498,7 +3658,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         def check_vss_info(cmd_type, key, expect_value):
@@ -3552,7 +3712,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
 
         """
 
@@ -3686,7 +3846,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -3716,7 +3876,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameterspy
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def log_check(qga_cmd):
@@ -3757,7 +3917,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         error_context.context(
             "Migrate guest while guest agent service is running.", LOG_JOB.info
@@ -3789,7 +3949,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         def wrap_windows_cmd(cmd):
@@ -3907,7 +4067,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -3938,7 +4098,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def bl_check(qga_cmd):
@@ -4019,7 +4179,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -4102,7 +4262,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
         9) Check the login time for every user.
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
         session = self._get_session(params, None)
         self._open_session_list.append(session)
@@ -4253,7 +4413,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def _result_check(rsult_qga, rsult_guest):
@@ -4398,7 +4558,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: QEMU test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         def _chk_cert(session, cert_path):
@@ -4626,7 +4786,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         session = self._get_session(params, None)
@@ -4665,7 +4825,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         @error_context.context_aware
@@ -4793,7 +4953,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         def get_blocks():
@@ -4867,7 +5027,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment.
         """
 
         def execute_qga_cmds_loop():
@@ -4979,7 +5139,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: kvm test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment.
+        :param env: Dictionary with the test environment
         """
 
         session = self._get_session(params, self.vm)
@@ -5021,7 +5181,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
 
         :param test: QEMU test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         run_install_cmd = params["run_install_cmd"]
@@ -5057,7 +5217,7 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
         """
         :param test: QEMU test object
         :param params: Dictionary with the test parameters
-        :param env: Dictionary with test environment
+        :param env: Dictionary with the test environment
         """
 
         vm = env.get_vm(params["main_vm"])
@@ -5094,7 +5254,7 @@ def run(test, params, env):
 
     :param test: kvm test object
     :param params: Dictionary with the test parameters
-    :param env: Dictionary with test environmen.
+    :param env: Dictionary with the test environment
     """
     if params["os_type"] == "windows":
         gagent_test = QemuGuestAgentBasicCheckWin(test, params, env)

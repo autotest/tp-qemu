@@ -15,12 +15,6 @@ from virttest import error_context
 LOG_JOB = logging.getLogger("avocado.test")
 
 
-class TDXError(Exception):
-    """General TDX error"""
-
-    pass
-
-
 class TDXHostCapability(object):
     """
     Hypervisor TDX capabilities check.
@@ -109,7 +103,7 @@ class TDXDcap(object):
         """
         :param test: Context of test.
         :param params: params of running ENV.
-        :param vm: VM object (optional, only needed for guest-related operations).
+        :param vm: VM object (optional).
         """
         self._test = test
         self._params = params
@@ -135,11 +129,16 @@ class TDXDcap(object):
         if not service:
             return
         # Check if service is enabled
-        status = process.run("systemctl is-enabled %s" % service, shell=True, ignore_status=True)
+        status = process.run(
+            "systemctl is-enabled %s" % service, shell=True, ignore_status=True
+        )
         if status.exit_status != 0:
-            self._test.fail("Service %s is not enabled，please check if sgx dcap packages are installed." % service)
+            self._test.fail(
+                "Service %s is not enabled, please check if sgx dcap packages "
+                "are installed." % service
+            )
         else:
-            self._test.log.info("Service %s is enabled" % service)
+            self._test.log.info("Service %s is enabled", service)
 
     def verify_dcap_attestation(self, session, deps_dir):
         """
@@ -174,35 +173,36 @@ class TDXDcap(object):
         pccs_config_dir = self._params.get("pccs_config_dir")
         pccs_config_file = os.path.join(pccs_config_dir, "pccs.conf")
         pccs_config_default_file = os.path.join(pccs_config_dir, "default.json")
-        if not pccs_config_default_file:
-            return
-        
+        if not os.path.exists(pccs_config_default_file):
+            self._test.cancel(
+                "PCCS configuration file %s does not exist" % pccs_config_default_file
+            )
         try:
-            process.run("cp %s %s" % (pccs_config_default_file, pccs_config_file), shell=True, timeout=60)
+            process.run(
+                "cp %s %s" % (pccs_config_default_file, pccs_config_file),
+                shell=True,
+                timeout=60,
+            )
             # Read the original config file
             with open(pccs_config_file, 'r') as f:
-                config = json.load(f)
-            
+                config = json.load(f)            
             # Get ApiKey from environment variable
-            api_key = os.environ["PCCS_PRIMARY_API_KEY"]
+            api_key = os.environ.get("PCCS_PRIMARY_API_KEY")
             if api_key:
-                config["ApiKey"] = api_key
-            
+                config["ApiKey"] = api_key            
             # Calculate UserTokenHash (SHA512 of user token from config)
-            user_token = self._params.get("pccs_user_token")
+            user_token = self._params.get("pccs_user_token", "redhat")
             user_token_hash = hashlib.sha512(user_token.encode()).hexdigest()
-            config["UserTokenHash"] = user_token_hash
-            
+            config["UserTokenHash"] = user_token_hash            
             # Calculate AdminTokenHash (SHA512 of admin token from config)
-            admin_token = self._params.get("pccs_admin_token")
+            admin_token = self._params.get("pccs_admin_token", "kvmautotest")
             admin_token_hash = hashlib.sha512(admin_token.encode()).hexdigest()
-            config["AdminTokenHash"] = admin_token_hash
-            
-            # Update ssl_cert and ssl_key 
-            openssl_check = process.run("command -v openssl", shell=True, ignore_status=True)
+            config["AdminTokenHash"] = admin_token_hash            
+            openssl_check = process.run(
+                "command -v openssl", shell=True, ignore_status=True
+            )
             if openssl_check.exit_status != 0:
-                self._test.cancel("Need to install openssl, test cancelled.")
-            
+                self._test.cancel("Need to install openssl, test cancelled.")            
             ssl_dir = self._params.get("pccs_ssl_dir")
             ssl_cert = self._params.get("pccs_ssl_cert")
             ssl_key = self._params.get("pccs_ssl_key")
@@ -213,10 +213,15 @@ class TDXDcap(object):
                     process.run(generate_ssl_cmd, shell=True, timeout=60)
                     ca_trust_cert = self._params.get("ca_trust_cert")
                     if ssl_cert and os.path.exists(ssl_cert):
-                        process.run("cp %s %s" % (ssl_cert, ca_trust_cert), shell=True, timeout=60)
-                        process.run("update-ca-trust", shell=True, timeout=60)
-                    
-                    process.run("chown -R pccs:pccs %s" % ssl_dir, shell=True, timeout=60)
+                        process.run(
+                            "cp %s %s" % (ssl_cert, ca_trust_cert),
+                            shell=True,
+                            timeout=60,
+                        )
+                        process.run("update-ca-trust", shell=True, timeout=60)                    
+                    process.run(
+                        "chown -R pccs:pccs %s" % ssl_dir, shell=True, timeout=60
+                    )
                     self._test.log.info("Set pccs SSL certificates")
                 except Exception as e:
                     self._test.fail("Failed to generate SSL certificates: %s" % str(e))
@@ -228,11 +233,14 @@ class TDXDcap(object):
             
             # Write the updated config back to file
             with open(pccs_config_file, 'w') as f:
-                json.dump(config, f, indent=4)
-            
-            self._test.log.info("Successfully updated pccs configuration file: %s" % pccs_config_default_file)
+                json.dump(config, f, indent=4)            
+            self._test.log.info(
+                "Successfully updated pccs configuration file: %s", pccs_config_file
+            )
         except Exception as e:
-            self._test.fail("Failed to config pccs configuration file: %s" % str(e))
+            self._test.fail(
+                "Failed to config pccs configuration file: %s" % str(e)
+            )
 
     def setup_sgx_qcnl_config(self):
         """
@@ -254,15 +262,17 @@ class TDXDcap(object):
             
             # Read and update config
             with open(sgx_qcnl_config_file, 'r') as f:
-                sgx_config = json.load(f)
-            
+                sgx_config = json.load(f)            
             if "pccs_url" in sgx_config:
-                sgx_config["pccs_url"] = re.sub(r':8081/', ':%s/' % pccs_port, sgx_config["pccs_url"])
-            
+                sgx_config["pccs_url"] = re.sub(
+                    r':8081/', ':%s/' % pccs_port, sgx_config["pccs_url"]
+                )            
             with open(sgx_qcnl_config_file, 'w') as f:
                 json.dump(sgx_config, f, indent=4)
         except Exception as e:
-            self._test.fail("Failed to update SGX QCNL configuration file: %s" % str(e))
+            self._test.fail(
+                "Failed to update SGX QCNL configuration file: %s" % str(e)
+            )
 
     def restart_dcap_services(self, services):
         """
@@ -274,9 +284,13 @@ class TDXDcap(object):
         for service in services:
             if service:
                 try:
-                    result = process.run("systemctl restart %s" % service, shell=True, timeout=60)
+                    process.run(
+                        "systemctl restart %s" % service, shell=True, timeout=60
+                    )
                 except Exception as e:
-                    self._test.fail("Failed to restart service %s: %s" % (service, str(e)))
+                    self._test.fail(
+                        "Failed to restart service %s: %s" % (service, str(e))
+                    )
 
     def verify_dcap_services(self, services):
         """
@@ -284,13 +298,22 @@ class TDXDcap(object):
 
         :param services: List of service names to verify
         """
-        error_context.context("Verify services are started and enabled", self._test.log.info)
+        error_context.context(
+            "Verify services are started and enabled", self._test.log.info
+        )
         for service in services:
             if service:
                 # Check if service is active (started)
-                status = process.run("systemctl is-active %s" % service, shell=True, ignore_status=True)
+                status = process.run(
+                    "systemctl is-active %s" % service,
+                    shell=True,
+                    ignore_status=True,
+                )
                 if status.exit_status != 0 or status.stdout_text.strip() != "active":
-                    self._test.fail("Service %s is not active (started), current status: %s" % (service, status.stdout_text.strip()))
+                    self._test.fail(
+                        "Service %s is not active (started), current status: %s"
+                        % (service, status.stdout_text.strip())
+                    )
                 else:
-                    self._test.log.info("Service %s is active" % service)
+                    self._test.log.info("Service %s is active", service)
 

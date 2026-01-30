@@ -1,5 +1,3 @@
-import os
-
 from avocado.utils import process
 from virttest import data_dir as virttest_data_dir
 from virttest import env_process, error_context
@@ -7,6 +5,8 @@ from virttest.utils_misc import (
     get_mem_info,
     normalize_data_size,
 )
+
+from provider.tdx import TDXDcap, TDXHostCapability
 
 
 @error_context.context_aware
@@ -27,14 +27,32 @@ def run(test, params, env):
     error_context.context("Start tdx test", test.log.info)
     timeout = params.get_numeric("login_timeout", 240)
 
-    tdx_module_path = params["tdx_module_path"]
-    if os.path.exists(tdx_module_path):
-        with open(tdx_module_path) as f:
-            output = f.read().strip()
-        if output not in params.objects("module_status"):
-            test.cancel("Host tdx support check fail.")
+    tdx_host_cap = TDXHostCapability(test, params)
+    tdx_host_cap.validate_tdx_cap()
+
+    # Setup SGX DCAP packages and pccsadmin tool test
+    tdx_dcap = TDXDcap(test, params)
+    # Check DCAP preset services first
+    dcap_preset_services = params.get("dcap_preset_services", "").split()
+    for service in dcap_preset_services:
+        if service:
+            tdx_dcap.check_preset_service(service)
+    dcap_non_preset_services = params.get("dcap_non_preset_services", "").split()
+    all_services = dcap_preset_services + dcap_non_preset_services
+
+    # Check DCAP services status before setup; skip config if already active
+    if tdx_dcap.verify_dcap_services(all_services, fail_on_inactive=False):
+        test.log.info("All DCAP services already active, skip PCCS/QCNL setup")
     else:
-        test.cancel("Host tdx support check fail.")
+        # Setup PCCS and SGX QCNL configuration
+        tdx_dcap.setup_pccs_config()
+        tdx_dcap.setup_sgx_qcnl_config()
+
+        # Restart DCAP services
+        tdx_dcap.restart_dcap_services(all_services)
+
+        # Verify services are started and enabled
+        tdx_dcap.verify_dcap_services(all_services)
 
     # Define maximum guests configurations
     max_vms_cmd = params.get("max_vms_cmd")
@@ -67,27 +85,14 @@ def run(test, params, env):
         session = None
         try:
             session = vm.wait_for_login(timeout=timeout)
-            session.cmd_output(guest_check_cmd, timeout=240)
+            session.cmd_status_output(guest_check_cmd, timeout=240)
         except Exception as e:
             test.fail("Guest tdx verify fail: %s" % str(e))
         else:
             # Verify attestation
-            error_context.context("Start to do attestation", test.log.info)
-            if not params.get("guest_script"):
-                test.cancel("Missing guest_script for attestation.")
-            guest_dir = params["guest_dir"]
-            host_script = params["host_script"]
-            guest_cmd = params["guest_cmd"]
             deps_dir = virttest_data_dir.get_deps_dir()
-            host_file = os.path.join(deps_dir, host_script)
-            try:
-                vm.copy_files_to(host_file, guest_dir)
-                session.cmd_output("chmod 755 %s" % guest_cmd)
-            except Exception as e:
-                test.fail("Guest test preparation fail: %s" % str(e))
-            s = session.cmd_status(guest_cmd, timeout=360)
-            if s:
-                test.fail("Guest script error")
+            tdx_dcap = TDXDcap(test, params, vm)
+            tdx_dcap.verify_dcap_attestation(session, deps_dir)
         finally:
             session.close()
             vm.destroy()

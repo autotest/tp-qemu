@@ -344,12 +344,19 @@ class BallooningTest(MemoryBaseTest):
                 return None
             return output
 
-        if self.test_round < 1:
-            self.memory_check("before ballooning test", 0)
-
         params_tag = self.params.object_params(tag)
         self.pre_mem = self.get_ballooned_memory()
         self.pre_gmem = self.get_memory_status()
+
+        self.test.log.info(
+            "Before balloon test,memory inside guest is %s\n"
+            "memory from qemu monitor is %s",
+            self.pre_gmem,
+            self.pre_mem,
+        )
+        if self.test_round < 1:
+            self.memory_check("before ballooning test", 0)
+
         self.balloon_memory(expect_mem)
         self.test_round += 1
         ballooned_memory = expect_mem - self.pre_mem

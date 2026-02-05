@@ -96,6 +96,9 @@ def run(test, params, env):
     if params.get("boot_with_viomem", "no") == "no":
         no_need_uninstall_dev_list.append("VirtIO Viomem Driver")
 
+    if params.get("boot_with_viosock", "no") == "no":
+        no_need_uninstall_dev_list.append("VirtIO Socket Driver")
+
     need_uninstall_dev_list = [
         item for item in device_name_list if item not in no_need_uninstall_dev_list
     ]

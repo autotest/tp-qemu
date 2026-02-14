@@ -95,7 +95,11 @@ def install_windbg(test, params, session, timeout=600):
     session.cmd(windbg_install_cmd)
 
     if not utils_misc.wait_for(
-        lambda: check_windbg_installed(params, session), timeout=timeout, step=5
+        lambda: check_windbg_installed(params, session),
+        timeout=60,
+        first=10,
+        # first=10 lets the silent WinDbg install settle before polling.
+        step=5,
     ):
         test.fail("windbg tool has not been installed")
     else:

@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import re
+import threading
 import time
 
 from avocado.utils import process
@@ -28,6 +29,7 @@ driver_name_list = [
     "vioinput",
     "fwcfg",
     "viomem",
+    "viosock",
 ]
 
 device_hwid_list = [
@@ -42,6 +44,7 @@ device_hwid_list = [
     '"PCI\\VEN_1AF4&DEV_1052"',
     '"ACPI\\VEN_QEMU&DEV_0002"',
     r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
+    r'"PCI\VEN_1AF4&DEV_1053" "PCI\VEN_1AF4&DEV_1012"',
 ]
 
 device_name_list = [
@@ -56,6 +59,7 @@ device_name_list = [
     "VirtIO Input Driver",
     "QEMU FwCfg Device",
     "VirtIO Viomem Driver",
+    "VirtIO Socket Driver",
 ]
 
 
@@ -449,3 +453,93 @@ def viomem_test(test, params, vm):
             virtio_mem_utils.check_memory_devices(
                 device_id, requested_size, threshold, vm, test
             )
+
+
+class VSockTransfer:
+    """
+    VSOCK data transfer handler for host-guest communication
+    """
+
+    def __init__(self):
+        """
+        Initialize the VSockTransfer instance
+        """
+        self.server_ready = threading.Event()
+        self.results = {}
+
+    def server_thread(self, session, cmd):
+        """
+        Execute server command in guest VM
+
+        :param session: VM session object
+        :param cmd: Server command to execute
+        """
+        self.server_ready.set()
+        result = session.cmd_output(cmd)
+        self.results["server"] = ("success", result)
+
+    def client_thread(self, cmd):
+        """
+        Execute client command on host
+
+        :param cmd: Client command to execute
+        """
+        self.server_ready.wait()
+        time.sleep(1)
+        result = process.system_output(cmd)
+        self.results["client"] = ("success", result)
+
+    def run(self, session, server_cmd, client_cmd):
+        """
+        Execute VSOCK data transfer between host and guest
+
+        :param session: VM session object
+        :param server_cmd: Command to run in guest VM
+        :param client_cmd: Command to run on host
+        :returns: Transfer results dictionary
+        """
+        threads = [
+            threading.Thread(target=self.server_thread, args=(session, server_cmd)),
+            threading.Thread(target=self.client_thread, args=(client_cmd,)),
+        ]
+
+        for t in threads:
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        return self.results
+
+
+def viosock_test(test, params, vm, guest_cid):
+    """
+    Trasfer data from host to VM via vsock
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    """
+    session = vm.wait_for_login()
+    path = win_driver_utils.get_driver_inf_path(
+        session, test, params["virtio_win_media_type"], params["driver_name"]
+    )
+    test_tool_src_path = path[: path.rfind("\\")] + "\\" + params["test_tool"]
+    session.cmd_output("xcopy %s C:\\ /y" % test_tool_src_path)
+    process.system_output(params["generate_file_cmd"])
+    server_cmd = params["receive_data_cmd"]
+    client_cmd = params["send_data_cmd"] % guest_cid
+
+    LOG_JOB.info("Transfer data from host to VM")
+    transfer = VSockTransfer()
+    transfer.run(session, server_cmd, client_cmd)
+
+    LOG_JOB.info("Check src and dst file's md5sum")
+    src_output = process.system_output("md5sum %s" % params["src_file_path"]).decode()
+    src_md5_sum = src_output.split()[0]
+    dst_output = session.cmd_output(params["md5sum_check_cmd"])
+    dst_md5_sum = dst_output.splitlines()[1]
+    if src_md5_sum != dst_md5_sum:
+        test.fail("File md5sum is not the same after transfer from host to guest")
+    else:
+        LOG_JOB.info("MD5 verification passed")

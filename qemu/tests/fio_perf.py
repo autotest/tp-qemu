@@ -8,6 +8,7 @@ import six
 from avocado.utils import process
 from virttest import (
     data_dir,
+    env_process,
     error_context,
     utils_disk,
     utils_misc,
@@ -109,6 +110,68 @@ def get_version(
         result_file.write("### virtiofsd_version : %s\n" % virtiofsd_ver)
 
 
+def setup_vbs(vm, session, params, test, login_timeout):
+    """
+    Setup and verify VBS (Virtualization-Based Security) in Windows guest.
+
+    This function performs the following steps:
+    1. Verify Secure Boot is enabled
+    2. Copy DG Readiness Tool to guest
+    3. Configure PowerShell execution policy
+    4. Check VBS readiness status
+    5. Enable VBS if not already enabled (requires reboot)
+    6. Verify VBS is properly enabled after reboot
+
+    :param vm: Virtual machine object
+    :param session: VM session object
+    :param params: Dictionary with test parameters
+    :param test: QEMU test object
+    :param login_timeout: Login timeout in seconds
+    :return: Updated session object (may be new session after reboot)
+    """
+    check_cmd = params["check_secure_boot_enabled_cmd"]
+    dgreadiness_path_command = params["dgreadiness_path_cmd"]
+    enable_command = params["vbs_enable_cmd"]
+    ready_command = params["vbs_ready_cmd"]
+    vbs_ready_info = params["vbs_ready_info"]
+    vbs_enable_info = params["vbs_enable_info"]
+    dst_path = params["dst_path"]
+
+    # Verify Secure Boot is enabled
+    output = session.cmd_output(check_cmd)
+    if "false" in output.lower():
+        test.fail("Secure Boot is not enabled: %s" % output)
+
+    # Copy DG Readiness Tool to guest
+    dgreadiness_host_path = data_dir.get_deps_dir("dgreadiness")
+    session.cmd_status_output("mkdir %s" % dst_path)
+    vm.copy_files_to(dgreadiness_host_path, dst_path)
+
+    # Enable vbs and check vbs status
+    session.cmd(dgreadiness_path_command)
+    status, output = session.cmd_status_output(ready_command)
+    if status != 0:
+        test.fail("Failed to check VBS status: %s" % output)
+    if vbs_ready_info not in output:
+        LOG_JOB.info("VBS not ready, enabling VBS features (Hyper-V and IOMMU)")
+        session.cmd_output(enable_command, 360)
+        if vbs_enable_info not in output:
+            test.fail("Failed to enable VBS: %s" % output)
+        vm.reboot(timeout=login_timeout)
+        session = vm.wait_for_login(timeout=login_timeout)
+
+        LOG_JOB.info("Verifying VBS status after reboot")
+        session.cmd(dgreadiness_path_command)
+        output = session.cmd_output(ready_command)
+        if vbs_ready_info not in output:
+            test.fail("VBS is not enabled after reboot. Output: %s" % output)
+        LOG_JOB.info("VBS successfully enabled and verified")
+    else:
+        LOG_JOB.info("VBS already enabled and ready")
+
+    return session
+
+
 @error_context.context_aware
 def run(test, params, env):
     """
@@ -161,11 +224,32 @@ def run(test, params, env):
                 node = utils_misc.NumaNode(int(node))
             utils_test.qemu.pin_vm_threads(vm, node)
 
+    # check if VBS is supported, prepare the environment for VBS test
+    vbs_support = params.get("vbs_support") == "yes"
+    if vbs_support:
+        error_context.context(
+            "Config the parameters to start vm with VBS.", logging.info
+        )
+        params["ovmf_vars_filename"] = "OVMF_VARS.secboot.fd"
+        # Force the image name to use the cloned version
+        vm_name = params["main_vm"]
+        image_name = params.get("image_name", "image")
+        cloned_image_name = f"{image_name}_{vm_name}"
+        params["image_name"] = cloned_image_name
+        params["start_vm"] = "yes"
+        env_process.preprocess_vm(test, params, env, params["main_vm"])
+
     # login virtual machine
     vm = env.get_vm(params["main_vm"])
     vm.verify_alive()
     login_timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=login_timeout)
+
+    # Setup VBS if enabled
+    if vbs_support:
+        error_context.context("Setup VBS (Virtualization-Based Security)", LOG_JOB.info)
+        session = setup_vbs(vm, session, params, test, login_timeout)
+
     process.system_output("numactl --hardware")
     process.system_output("numactl --show")
     _pin_vm_threads(params.get("numa_node"))
@@ -377,4 +461,10 @@ def run(test, params, env):
         fs_dest = fs_params.get("fs_dest")
         utils_disk.umount(fs_target, fs_dest, "virtiofs", session=session)
         utils_misc.safe_rmdir(fs_dest, session=session)
+
+    if params.get("vbs_support") == "yes":
+        LOG_JOB.info("Cleaning up VBS configuration")
+        session.cmd(params["dgreadiness_path_cmd"])
+        session.cmd_output(params["vbs_disable_cmd"], 360)
+
     session.close()

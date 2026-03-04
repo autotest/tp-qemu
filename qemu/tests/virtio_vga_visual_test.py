@@ -178,27 +178,53 @@ class VNCEnvironmentManager:
 
     def install_tool(self):
         """Install gvncviewer-customize to /usr/bin."""
-        # Check if already installed and executable
+        # ========== TEMPORARY MODIFICATION START ==========
+        # Skip URL download, directly use pre-deployed tool in /usr/bin
+        # TODO: Remove this block after uploading gvncviewer-customize to URL
         if os.path.exists(self.tool_install_path) and os.access(
             self.tool_install_path, os.X_OK
         ):
+            LOG_JOB.info(
+                "[TEMP] Using pre-deployed gvncviewer-customize at %s",
+                self.tool_install_path,
+            )
             return True
+        else:
+            raise RuntimeError(
+                "[TEMP] gvncviewer-customize not found at %s. "
+                "Please manually copy the compiled tool to "
+                "/usr/bin/ on the test host:\n"
+                "  scp /home/demeng/Github/for-cpu-add/gtk-vnc/"
+                "builddir/examples/gvncviewer-customize "
+                "<test-host>:/usr/bin/\n"
+                "  ssh <test-host> "
+                "'chmod +x /usr/bin/gvncviewer-customize'" % self.tool_install_path
+            )
+        # ========== TEMPORARY MODIFICATION END ==========
 
-        # Download if needed
-        if not os.path.exists(self.tool_download_path):
-            self.download_tool()
-
-        # Make executable and move to /usr/bin
-        os.chmod(self.tool_download_path, 0o755)
-        self._run_cmd(["mv", self.tool_download_path, self.tool_install_path])
-
-        # Verify installation
-        if not os.path.exists(self.tool_install_path) or not os.access(
-            self.tool_install_path, os.X_OK
-        ):
-            raise RuntimeError("Tool installation failed")
-
-        return True
+        # ========== ORIGINAL CODE - COMMENTED OUT TEMPORARILY ==========
+        # # Check if already installed and executable
+        # if os.path.exists(self.tool_install_path) and os.access(
+        #     self.tool_install_path, os.X_OK
+        # ):
+        #     return True
+        #
+        # # Download if needed
+        # if not os.path.exists(self.tool_download_path):
+        #     self.download_tool()
+        #
+        # # Make executable and move to /usr/bin
+        # os.chmod(self.tool_download_path, 0o755)
+        # self._run_cmd(["mv", self.tool_download_path, self.tool_install_path])
+        #
+        # # Verify installation
+        # if not os.path.exists(self.tool_install_path) or not os.access(
+        #     self.tool_install_path, os.X_OK
+        # ):
+        #     raise RuntimeError("Tool installation failed")
+        #
+        # return True
+        # ========== ORIGINAL CODE END ==========
 
     def setup(self):
         """Complete environment setup process."""
@@ -264,6 +290,10 @@ class VirtioVgaVisualTest:
         self._open_session_list = []
         self._env_mgr = None
         self._env_setup_done = False
+
+        # Cache for vgpusrv.exe to avoid repeated path lookups
+        self._vgpusrv_path = None
+        self._vgpusrv_installed = False
 
     def _get_session(self):
         """Get a session and track it for cleanup."""
@@ -935,7 +965,6 @@ class VirtioVgaVisualTest:
         caption = self.session.cmd_output(
             "wmic os get Caption /format:list", timeout=60
         )
-        LOG_JOB.debug("Windows Caption: %s", caption)
 
         version_map_str = self.params.get("win_version_map", "")
         version_map = {}
@@ -946,7 +975,6 @@ class VirtioVgaVisualTest:
 
         for version_key, dirname in version_map.items():
             if version_key in caption:
-                LOG_JOB.debug("Matched version '%s' -> '%s'", version_key, dirname)
                 return dirname
 
         self.test.error("Unsupported Windows version: %s" % caption)
@@ -993,6 +1021,230 @@ class VirtioVgaVisualTest:
 
         LOG_JOB.info("Driver base path: %s", base_path)
         return cat_path, sys_path, inf_path
+
+    def _get_vgpusrv_path(self):
+        """Get vgpusrv.exe path from virtio-win ISO.
+
+        vgpusrv.exe is in the same directory as viogpudo driver files.
+
+        :return: Full Windows path (e.g., E:\\viogpudo\\w11\\amd64\\vgpusrv.exe)
+        """
+        # Return cached path if already found
+        if self._vgpusrv_path:
+            return self._vgpusrv_path
+
+        error_context.context("Locating vgpusrv.exe service binary", LOG_JOB.info)
+
+        from virttest.utils_windows import virtio_win
+
+        driver_name = self.params.get("driver_name")
+        media_type = self.params.get("virtio_win_media_type")
+        vgpusrv_exe_name = self.params.get("vgpusrv_exe_name", "vgpusrv.exe")
+
+        try:
+            get_drive_letter = getattr(virtio_win, "drive_letter_%s" % media_type)
+            get_arch_dirname = getattr(virtio_win, "arch_dirname_%s" % media_type)
+        except AttributeError:
+            self.test.error("Not supported virtio win media type '%s'" % media_type)
+
+        viowin_ltr = get_drive_letter(self.session)
+        if not viowin_ltr:
+            self.test.error("Could not find virtio-win drive in guest")
+
+        guest_arch = get_arch_dirname(self.session)
+        if not guest_arch:
+            self.test.error("Could not get architecture dirname")
+
+        win_version_dir = self._get_windows_version_dirname()
+        base_path = "%s\\%s\\%s\\%s" % (
+            viowin_ltr,
+            driver_name,
+            win_version_dir,
+            guest_arch,
+        )
+
+        vgpusrv_path = "%s\\%s" % (base_path, vgpusrv_exe_name)
+        LOG_JOB.info("vgpusrv.exe path: %s", vgpusrv_path)
+
+        # Verify file exists
+        check_cmd = 'if exist "%s" (echo EXISTS) else (echo NOT_FOUND)' % vgpusrv_path
+        output = self.session.cmd_output(check_cmd, timeout=30).strip()
+
+        if "NOT_FOUND" in output:
+            self.test.error(
+                "vgpusrv.exe not found at %s. "
+                "Ensure virtio-win ISO contains vgpusrv.exe" % vgpusrv_path
+            )
+
+        # Cache path for future use
+        self._vgpusrv_path = vgpusrv_path
+        return vgpusrv_path
+
+    def _install_vgpusrv_service(self):
+        """Install vgpusrv.exe as Windows service (vgpusrv.exe -i)."""
+        # Skip if already installed in this test session
+        if self._vgpusrv_installed:
+            LOG_JOB.info("vgpusrv service already installed in this test session")
+            return
+
+        error_context.context("Installing vgpusrv service", LOG_JOB.info)
+
+        vgpusrv_path = self._get_vgpusrv_path()
+        install_cmd_template = self.params.get("vgpusrv_install_cmd", "%s -i")
+        install_cmd = install_cmd_template % vgpusrv_path
+
+        LOG_JOB.info("Executing: %s", install_cmd)
+        timeout = int(self.params.get("vgpusrv_operation_timeout", 60))
+        status, output = self.session.cmd_status_output(install_cmd, timeout=timeout)
+
+        if status != 0:
+            self.test.fail(
+                "Failed to install vgpusrv service (exit code: %d). "
+                "Command: %s\nOutput: %s" % (status, install_cmd, output)
+            )
+
+        LOG_JOB.info("vgpusrv service installed successfully")
+        self._vgpusrv_installed = True
+
+    def _start_vgpusrv_service(self):
+        """Start/restart vgpusrv.exe service.
+
+        Executes vgpusrv.exe -r and waits for stabilization.
+        """
+        error_context.context("Starting vgpusrv service", LOG_JOB.info)
+
+        vgpusrv_path = self._get_vgpusrv_path()
+        start_cmd_template = self.params.get("vgpusrv_start_cmd", "%s -r")
+        start_cmd = start_cmd_template % vgpusrv_path
+
+        LOG_JOB.info("Executing: %s", start_cmd)
+        timeout = int(self.params.get("vgpusrv_operation_timeout", 60))
+        status, output = self.session.cmd_status_output(start_cmd, timeout=timeout)
+
+        if status != 0:
+            self.test.fail(
+                "Failed to start vgpusrv service (exit code: %d). "
+                "Command: %s\nOutput: %s" % (status, start_cmd, output)
+            )
+
+        LOG_JOB.info("vgpusrv service started successfully")
+
+        # Wait for service to stabilize
+        stabilize_time = int(self.params.get("vgpusrv_stabilize_time", 5))
+        LOG_JOB.info("Waiting %d seconds for service stabilization", stabilize_time)
+        time.sleep(stabilize_time)
+
+    def _stop_vgpusrv_service(self):
+        """Stop vgpusrv.exe service (vgpusrv.exe -s).
+
+        Used in cleanup, errors logged as warnings.
+        """
+        error_context.context("Stopping vgpusrv service", LOG_JOB.info)
+
+        try:
+            vgpusrv_path = self._get_vgpusrv_path()
+            stop_cmd_template = self.params.get("vgpusrv_stop_cmd", "%s -s")
+            stop_cmd = stop_cmd_template % vgpusrv_path
+
+            LOG_JOB.info("Executing: %s", stop_cmd)
+            timeout = int(self.params.get("vgpusrv_operation_timeout", 60))
+            status, output = self.session.cmd_status_output(stop_cmd, timeout=timeout)
+
+            if status != 0:
+                LOG_JOB.warning(
+                    "Failed to stop vgpusrv service (exit code: %d). "
+                    "May already be stopped. Output: %s",
+                    status,
+                    output,
+                )
+            else:
+                LOG_JOB.info("vgpusrv service stopped successfully")
+
+        except Exception as e:
+            LOG_JOB.warning("Exception while stopping vgpusrv service: %s", e)
+
+    def _vnc_change_resolution(self, width, height):
+        """Change VNC window resolution to trigger guest auto-resize.
+
+        Uses gvncviewer-customize with -r flag. The vgpusrv.exe service
+        in guest will detect display change and auto-adjust Windows resolution.
+
+        :param width: Target width in pixels (int)
+        :param height: Target height in pixels (int)
+        :return: True if successful, False otherwise
+        """
+        error_context.context(
+            "Changing VNC resolution to %dx%d" % (width, height), LOG_JOB.info
+        )
+
+        # Get VNC connection details
+        vnc_port = self.vm.get_vnc_port()
+        vnc_display = vnc_port - 5900
+        vnc_host = self.params.get("vnc_host", "127.0.0.1")
+
+        LOG_JOB.info(
+            "Requesting VNC window resize: %dx%d on %s:%s (port %s)",
+            width,
+            height,
+            vnc_host,
+            vnc_display,
+            vnc_port,
+        )
+
+        # Build command (same structure as _vnc_screendump)
+        cmd = []
+
+        # Add xwayland wrapper for RHEL 10+
+        if self._env_mgr.display_type == "xwayland":
+            cmd.extend(
+                [
+                    "xwfb-run",
+                    "-c",
+                    "mutter",
+                    "-s",
+                    "\\\\-geometry",
+                    "-s",
+                    self._env_mgr.display_resolution,
+                    "--",
+                ]
+            )
+
+        # Add gvncviewer-customize with -r flag
+        cmd.extend(
+            [
+                self._env_mgr.tool_install_path,
+                "-s",
+                "%s:%s" % (vnc_host, vnc_display),
+                "-r",
+                "%dx%d" % (width, height),
+                "-c",
+            ]
+        )
+
+        try:
+            cmd_str = " ".join(cmd)
+            result = process.run(cmd_str, timeout=30, ignore_status=True, verbose=False)
+
+            if result.exit_status != 0:
+                LOG_JOB.error(
+                    "VNC resize command failed (exit %d): %s",
+                    result.exit_status,
+                    result.stderr_text,
+                )
+                return False
+
+            LOG_JOB.info("VNC resize command executed successfully")
+
+            # Wait for guest to auto-adjust
+            wait_time = int(self.params.get("vnc_resolution_change_time", 10))
+            LOG_JOB.info("Waiting %d seconds for guest auto-adjustment", wait_time)
+            time.sleep(wait_time)
+
+            return True
+
+        except Exception as e:
+            LOG_JOB.error("Exception during VNC resize: %s", e)
+            return False
 
     def _verify_signtool_output(self, output, file_path):
         """Verify SignTool output contains success indicators."""
@@ -1228,7 +1480,6 @@ class VirtioVgaVisualTest:
             height,
         )
 
-        LOG_JOB.debug("Executing resolution change command: %s", cmd)
         status, output = self.session.cmd_status_output(cmd, timeout=60)
         success = status == 0 and "SUCCESS" in output
 
@@ -1783,9 +2034,175 @@ class VirtioVgaVisualTest:
 
     @error_context.context_aware
     def run_resolution_modification_auto(self):
-        self.test.fail(
-            "Test action 'resolution_modification_auto' requires VNC tool integration."
+        """Test automatic resolution modification with vgpusrv.exe service.
+
+        Flow:
+        1. Ensure driver installed
+        2. Install and start vgpusrv.exe service
+        3. For each test resolution:
+           - Change VNC window size (triggers auto-resize)
+           - Verify via Windows API (3 retries)
+           - Capture VNC screenshot
+           - Verify screenshot dimensions (±10px tolerance)
+           - Verify visual quality with AI
+        4. Cleanup: stop vgpusrv service
+        """
+        error_context.context(
+            "Starting automatic resolution modification test", LOG_JOB.info
         )
+
+        # Phase 1: Initialization
+        error_context.context("Ensuring virtio-vga driver installed", LOG_JOB.info)
+        self._ensure_driver_installed()
+        use_vnc = self.params.get("use_vnc_screenshot", "yes") == "yes"
+
+        # Install and start vgpusrv service
+        try:
+            self._install_vgpusrv_service()
+            self._start_vgpusrv_service()
+        except Exception as e:
+            self.test.fail(
+                "Failed to initialize vgpusrv service: %s. "
+                "Cannot proceed with automatic resolution test." % e
+            )
+
+        # Phase 2: Test Preparation
+        error_context.context("Getting initial resolution", LOG_JOB.info)
+        initial_res = self._get_current_resolution()
+        if not initial_res:
+            self.test.error("Failed to get initial resolution")
+        LOG_JOB.info("Initial resolution: %s", initial_res)
+
+        # Get test resolutions
+        test_resolutions_str = self.params.get(
+            "test_resolutions_auto", "1920x1080 1280x720 1024x768"
+        )
+        test_resolutions = test_resolutions_str.split()
+
+        # Validate format
+        for res in test_resolutions:
+            if not re.match(r"^\d+x\d+$", res):
+                self.test.error(
+                    "Invalid resolution format: '%s'. Expected WIDTHxHEIGHT" % res
+                )
+
+        LOG_JOB.info(
+            "Testing automatic resolution adjustment for: %s",
+            ", ".join(test_resolutions),
+        )
+
+        # Phase 3: Resolution Test Loop
+        try:
+            for target_res in test_resolutions:
+                width, height = target_res.split("x")
+                target_width, target_height = int(width), int(height)
+
+                error_context.context(
+                    "Testing automatic resolution change to %s" % target_res,
+                    LOG_JOB.info,
+                )
+
+                # Step 1: Change VNC window size
+                if not self._vnc_change_resolution(target_width, target_height):
+                    self.test.fail(
+                        "Failed to change VNC window size to %s" % target_res
+                    )
+
+                # Step 2: Verify via Windows API (3 retries)
+                error_context.context(
+                    "Verifying guest OS auto-adjusted to %s" % target_res, LOG_JOB.info
+                )
+
+                verified_res = None
+                for attempt in range(3):
+                    current_res = self._get_current_resolution()
+
+                    if current_res == target_res:
+                        verified_res = current_res
+                        LOG_JOB.info(
+                            "Guest OS auto-adjusted to %s on attempt %d",
+                            target_res,
+                            attempt + 1,
+                        )
+                        break
+
+                    if attempt < 2:
+                        time.sleep(2)
+
+                if verified_res != target_res:
+                    self.test.fail(
+                        "Automatic resolution adjustment failed after 3 attempts: "
+                        "VNC window changed to %s, but guest OS is %s. "
+                        "vgpusrv.exe may not be functioning correctly."
+                        % (target_res, verified_res)
+                    )
+
+                # Step 3: Capture screenshot
+                error_context.context(
+                    "Capturing VNC screenshot at %s" % target_res, LOG_JOB.info
+                )
+                screenshot_path, _, _, _ = self._capture_visual_evidence(
+                    "auto_resolution_%s" % target_res, use_vnc=use_vnc
+                )
+
+                # Step 4: Verify screenshot dimensions
+                error_context.context(
+                    "Verifying screenshot dimensions match %s" % target_res,
+                    LOG_JOB.info,
+                )
+                screenshot_width, screenshot_height = ppm_utils.image_size(
+                    screenshot_path
+                )
+                LOG_JOB.info(
+                    "Screenshot dimensions: %dx%d (expected: %s)",
+                    screenshot_width,
+                    screenshot_height,
+                    target_res,
+                )
+
+                width_diff = abs(screenshot_width - target_width)
+                height_diff = abs(screenshot_height - target_height)
+
+                if width_diff > 10 or height_diff > 10:
+                    self.test.fail(
+                        "Screenshot dimension mismatch: expected %s, got %dx%d "
+                        "(diff: %dx%d, tolerance: ±10px)"
+                        % (
+                            target_res,
+                            screenshot_width,
+                            screenshot_height,
+                            width_diff,
+                            height_diff,
+                        )
+                    )
+
+                # Step 5: AI visual quality verification
+                error_context.context(
+                    "Verifying visual quality at %s" % target_res, LOG_JOB.info
+                )
+                prompt = self.params.get("prompt_desktop_check")
+                ai_response = ppm_utils.verify_screen_with_gemini(
+                    screenshot_path, prompt, results_dir=self.results_dir
+                )
+
+                if "no" in ai_response.lower().split():
+                    self.test.fail(
+                        "Visual quality check failed at resolution %s: "
+                        "Desktop does not appear normal. "
+                        "AI response: '%s'" % (target_res, ai_response)
+                    )
+
+                LOG_JOB.info("SUCCESS: Auto resolution to %s verified", target_res)
+
+            LOG_JOB.info(
+                "All automatic resolution adjustments verified (%d resolutions)",
+                len(test_resolutions),
+            )
+
+        finally:
+            # Phase 4: Cleanup
+            error_context.context("Cleaning up vgpusrv service", LOG_JOB.info)
+            self._stop_vgpusrv_service()
 
     @error_context.context_aware
     def run_resolution_modification_manual(self):

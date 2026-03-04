@@ -10,20 +10,22 @@ def run(test, params, env):
     Fwcfg64 basic function test:
 
     1) Boot guest with -device vmcoreinfo.
-    2) Check the fwcfgg64 driver has been installed.
+    2) Check the fwcfg64 driver has been installed.
     3) Run "dump-guest-memory -w memory.dmp" in qemu monitor.
-    4) Check the memory.dmp can be saved and the size is larger then 0Kb.
-    5) Check the dump file can be open with windb tools.
+    4) Check the memory.dmp can be saved and the size is larger than 0Kb.
+    5) Install Windows SDK Debugging Tools if not present.
+    6) Analyze dump file with cdb.exe (command-line debugger).
     """
     win_dump_utils.set_vm_for_dump(test, params)
     vm_name = params["main_vm"]
+    params["mem"] = "4096"
     params["start_vm"] = "yes"
     env_process.preprocess_vm(test, params, env, vm_name)
     vm = env.get_vm(vm_name)
 
     session = vm.wait_for_login()
     driver = params["driver_name"]
-    wdbg_timeout = params.get("wdbg_timeout", 600)
+    wdbg_timeout = params.get_numeric("wdbg_timeout", 600)
     error_context.context("Check fwcfg driver is running", test.log.info)
     utils_test.qemu.windrv_verify_running(session, test, driver)
     if params.get("setup_verifier", "yes") == "yes":
@@ -52,20 +54,25 @@ def run(test, params, env):
         if status:
             test.error("unzip dump file failed as:\n%s" % output)
         session.cmd(params["move_cmd"].format(disk_letter))
-        session.cmd(params["save_path_cmd"].format(disk_letter))
-        windbg_installed = False
-        status, _ = session.cmd_status_output(params["chk_sdk_ins"])
-        if not status:
-            windbg_installed = True
-        if not windbg_installed:
-            win_dump_utils.install_windbg(test, params, session, timeout=wdbg_timeout)
+        dump_path = "%s:\\%s" % (disk_letter, params["dump_file"])
+        # Verify dump file landed correctly
+        status, output = session.cmd_status_output('dir "%s"' % dump_path)
+        if status:
+            dir_output = session.cmd_output("dir %s:\\" % disk_letter)
+            test.error(
+                "Dump file not found at %s, drive contents:\n%s"
+                % (dump_path, dir_output)
+            )
+
+        win_dump_utils.install_windbg(test, params, session, timeout=wdbg_timeout)
+
         # TODO: A temporary workaround to clear up unexpected pop-up in guest
         if params.get("need_reboot", "no") == "yes":
             session = vm.reboot()
-        win_dump_utils.dump_windbg_check(test, params, session)
+
+        error_context.context("Analyze dump file with cdb.exe", test.log.info)
+        win_dump_utils.dump_cdb_check(test, params, session, dump_path)
     finally:
         process.system("rm %s %s" % (dump_file, dump_zip_file), shell=True)
-        session.cmd("del %s" % params["dump_analyze_file"])
-        session.cmd(params["del_path_file"])
         session.close()
     win_driver_utils.memory_leak_check(vm, test, params)

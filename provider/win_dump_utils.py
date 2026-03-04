@@ -59,11 +59,19 @@ def generate_mem_dump(test, params, vm):
         if dump_size == 0:
             test.fail("The size of dump file is %d" % dump_size)
 
+    # Verify dump file can be opened
+    try:
+        with open(dump_file, "rb") as f:
+            f.read(1)
+    except IOError as e:
+        test.fail("Dump file %s cannot be opened: %s" % (dump_file, e))
+
     dump_name_zip = "%s.zip" % dump_name
     process.system(
         "cd %s && zip %s %s" % (tmp_dir, dump_name_zip, dump_name), shell=True
     )
     dump_file_zip = tmp_dir + "/" + dump_name_zip
+
     return dump_file, dump_file_zip
 
 
@@ -87,7 +95,11 @@ def install_windbg(test, params, session, timeout=600):
     session.cmd(windbg_install_cmd)
 
     if not utils_misc.wait_for(
-        lambda: check_windbg_installed(params, session), timeout=timeout, step=5
+        lambda: check_windbg_installed(params, session),
+        timeout=60,
+        first=10,
+        # first=10 lets the silent WinDbg install settle before polling.
+        step=5,
     ):
         test.fail("windbg tool has not been installed")
     else:
@@ -160,3 +172,47 @@ def check_log_exist(session, log_file):
     chk_log_exist = "dir %s" % log_file
     status, _ = session.cmd_status_output(chk_log_exist)
     return False if status else True
+
+
+def dump_cdb_check(test, params, session, dump_path):
+    """
+    Analyze a Windows dump file using cdb.exe (command-line debugger).
+
+    This replaces the previous AutoIt + WinDbg GUI approach with a simpler
+    and more reliable command-line method.
+    The cdb.exe path is configured per platform in the cfg file (cdb_path).
+
+    :param test: kvm test object
+    :param params: the dict used for parameters.
+    :param session: The guest session object.
+    :param dump_path: Full path to the dump file in guest, e.g. "G:\\Memory.dmp".
+    """
+    LOG_JOB.info("Analyzing dump file using cdb.exe command-line debugger")
+    cdb_path = params["cdb_path"]
+    cdb_timeout = params.get_numeric("cdb_timeout", 600)
+    cdb_keyword = params.get("cdb_keyword", "LIVE_SYSTEM_DUMP (161)")
+    LOG_JOB.info("Dump file path: %s", dump_path)
+
+    # Pre-flight: verify tools and dumps exist
+    status, output = session.cmd_status_output('dir "%s"' % cdb_path)
+    if status:
+        test.error("cdb.exe not found at: %s" % cdb_path)
+
+    status, output = session.cmd_status_output('dir "%s"' % dump_path)
+    if status:
+        test.error("Dump file not found at: %s" % dump_path)
+
+    cdb_cmd = '"%s" -z "%s" -c "!analyze -v; q"' % (cdb_path, dump_path)
+    LOG_JOB.info("Running cdb command: %s", cdb_cmd)
+    status, output = session.cmd_status_output(cdb_cmd, timeout=cdb_timeout)
+    LOG_JOB.info("cdb.exe output:\n%s", output)
+    if status:
+        LOG_JOB.warning("cdb.exe returned non-zero exit code: %s", status)
+
+    if cdb_keyword in output:
+        LOG_JOB.info("Dump analysis with cdb.exe passed")
+    else:
+        test.fail(
+            "Dump analysis check failed, keyword %s not found in output:\n%s"
+            % (cdb_keyword, output)
+        )

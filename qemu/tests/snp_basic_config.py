@@ -67,12 +67,11 @@ def run(test, params, env):
             "Error: Unable to find /dev/sev-guest. Guest kernel support for "
             "SNP attestation is missing."
         )
-    vm_policy = vm.params.get("snp_policy")
-    vm_policy_int = int(vm_policy, 0)
+    vm_policy_int = vm.params.get_numeric("vm_sev_policy", 196608)
     guest_check_cmd = params["snp_guest_check"]
     sev_guest_info = vm.monitor.query_sev()
     if sev_guest_info["snp-policy"] != vm_policy_int:
-        test.fail("QMP snp policy doesn't match %s." % vm_policy)
+        test.fail("QMP snp policy doesn't match %s." % vm_policy_int)
     try:
         session.cmd_output(guest_check_cmd, timeout=240)
     except Exception as e:

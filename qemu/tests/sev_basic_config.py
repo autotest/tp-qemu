@@ -36,7 +36,7 @@ def run(test, params, env):
         vm.verify_alive()
         session = vm.wait_for_login(timeout=timeout)
         verify_dmesg()
-        vm_policy = vm.params.get_numeric("vm_sev_policy")
+        vm_policy = vm.params.get_numeric("vm_sev_policy", 3)
         if vm_policy <= 3:
             policy_keyword = "sev"
         else:

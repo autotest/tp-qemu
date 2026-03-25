@@ -3,6 +3,7 @@ import os
 from avocado.utils import cpu
 from virttest import data_dir as virttest_data_dir
 from virttest import error_context
+from virttest.staging import utils_memory
 from virttest.utils_misc import verify_dmesg
 
 
@@ -11,9 +12,10 @@ def run(test, params, env):
     """
     Qemu snp basic test on Milan and above host:
     1. Check host snp capability
-    2. Boot snp VM
-    3. Verify snp enabled in guest
-    4. Check snp qmp cmd and policy
+    2. Check host memory availability
+    3. Boot snp VM
+    4. Verify snp enabled in guest
+    5. Check snp qmp cmd and policy
 
     :param test: QEMU test object
     :param params: Dictionary with the test parameters
@@ -36,6 +38,18 @@ def run(test, params, env):
         res = cpu.lscpu()
         if int(res["sockets"]) != 1:
             test.cancel("Host cpu has more than 1 socket, skip the case.")
+
+    # Check host memory availability
+    required_mem = params.get_numeric("mem")
+    utils_memory.drop_caches()
+    available_mem = utils_memory.read_from_meminfo("MemAvailable")
+    # Convert to MB
+    available_mem_mb = available_mem / 1024
+    if available_mem_mb < required_mem:
+        test.cancel(
+            "Insufficient host memory. Required: %d MB, "
+            "Available: %d MB" % (required_mem, available_mem_mb)
+        )
 
     family_id = int(cpu.get_family())
     model_id = int(cpu.get_model())

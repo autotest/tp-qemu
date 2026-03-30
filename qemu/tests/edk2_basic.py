@@ -20,7 +20,7 @@ def run(test, params, env):
     """
     timeout = params.get_numeric("login_timeout", 240)
     line_numbers = params.get_numeric("line_numbers", 40)
-    check_messgae = params.get("check_messgae")
+    check_message = params.get("check_message")
     vm = env.get_vm(params["main_vm"])
 
     for i in range(params.get_numeric("reboot_count", 1)):
@@ -28,7 +28,7 @@ def run(test, params, env):
         error_context.context("Check serial log result", test.log.info)
         try:
             output = vm.serial_console.read_until_output_matches(
-                [check_messgae], timeout=timeout
+                [check_message], timeout=timeout
             )
         except Exception as msg:
             test.log.error(msg)

@@ -35,6 +35,12 @@ def run(test, params, env):
         dev_name = utils_misc.wait_for(lambda: iscsi.get_device_name(), 60)
         if not dev_name:
             test.error("Can not get the iSCSI device.")
+        process.run("udevadm settle && sleep 2", shell=True)
+        test.log.debug(
+            "lsblk -nd %s:\n%s",
+            dev_name,
+            process.getoutput("lsblk -nd %s" % dev_name),
+        )
         process.run(params["cmd_fdisk"] % dev_name, 600, shell=True)
         params["pv_name"] = (
             process.system_output(

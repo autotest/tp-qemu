@@ -124,6 +124,7 @@ def run(test, params, env):
                         format_node = vm.devices[drive]
                         nodes = [format_node]
                         nodes.extend((n for n in format_node.get_child_nodes()))
+                        vm.devices.remove(dev, True)
                         for node in nodes:
                             if not node.verify_unplug(
                                 node.unplug(vm.monitor), vm.monitor
@@ -133,15 +134,17 @@ def run(test, params, env):
                                 )
                             vm.devices.remove(
                                 node,
-                                True
-                                if isinstance(node, qdevices.QBlockdevFormatNode)
-                                else False,
+                                isinstance(node, qdevices.QBlockdevFormatNode),
                             )
-                            if not isinstance(node, qdevices.QBlockdevFormatNode):
+                            if node is not format_node and not isinstance(
+                                node, qdevices.QBlockdevFormatNode
+                            ):
                                 format_node.del_child_node(node)
                     else:
                         vm.devices.remove(drive)
-                vm.devices.remove(dev, True)
+                        vm.devices.remove(dev, True)
+                else:
+                    vm.devices.remove(dev, True)
 
             except (DeviceError, KeyError) as exc:
                 dev.unplug_unhook()

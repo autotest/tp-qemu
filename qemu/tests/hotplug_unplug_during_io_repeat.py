@@ -26,8 +26,10 @@ def run(test, params, env):
     def _check_iozone_status():
         ck_session = vm.wait_for_login(timeout=360)
         if not utils_misc.wait_for(
-            lambda: check_cmd[os_type].split()[-1].lower()
-            in ck_session.cmd_output(check_cmd[os_type]).lower(),
+            lambda: (
+                check_cmd[os_type].split()[-1].lower()
+                in ck_session.cmd_output(check_cmd[os_type]).lower()
+            ),
             180,
             step=3.0,
         ):

@@ -812,8 +812,8 @@ def run(test, params, env):
                     session.cmd(create_dir_winapi_cmd % fs_dest)
 
                     ret = utils_misc.wait_for(
-                        lambda: not bool(
-                            session.cmd_status(check_winapi_dir_cmd % fs_dest)
+                        lambda: (
+                            not bool(session.cmd_status(check_winapi_dir_cmd % fs_dest))
                         ),
                         timeout=60,
                     )

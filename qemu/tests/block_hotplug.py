@@ -22,8 +22,9 @@ def find_all_disks(session, windows):
 def wait_plug_disks(session, action, disks_before_plug, excepted_num, windows, test):
     """Wait plug disks completely."""
     if not utils_misc.wait_for(
-        lambda: len(disks_before_plug ^ find_all_disks(session, windows))
-        == excepted_num,
+        lambda: (
+            len(disks_before_plug ^ find_all_disks(session, windows)) == excepted_num
+        ),
         60,
         step=1.5,
     ):

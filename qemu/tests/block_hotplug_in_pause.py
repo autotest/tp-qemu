@@ -182,8 +182,10 @@ def run(test, params, env):
         test.log.info("Check block device in guest after %s.", plug_tag)
         pause = float(params.get("virtio_block_pause", 30.0))
         status = utils_misc.wait_for(
-            lambda: len(get_plug_unplug_disks(disks, find_disk(session, get_disk_cmd)))
-            == blk_num,
+            lambda: (
+                len(get_plug_unplug_disks(disks, find_disk(session, get_disk_cmd)))
+                == blk_num
+            ),
             pause,
         )
         disks = get_plug_unplug_disks(disks, find_disk(session, get_disk_cmd))

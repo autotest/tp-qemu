@@ -115,10 +115,12 @@ class StorageBenchmark(object):
         )
         LOG_JOB.info("Checking the running %s processes.", self.name)
         if not utils_misc.wait_for(
-            lambda: not re.search(
-                proc_name.lower(),
-                session.cmd_output(self._list_pid % proc_name),
-                re.I | re.M,
+            lambda: (
+                not re.search(
+                    proc_name.lower(),
+                    session.cmd_output(self._list_pid % proc_name),
+                    re.I | re.M,
+                )
             ),
             timeout,
             step=3.0,

@@ -4,8 +4,9 @@ import random
 import re
 import time
 
+import aexpect
 from avocado.utils import process
-from virttest import error_context, utils_disk, utils_misc, utils_net
+from virttest import error_context, utils_disk, utils_logfile, utils_misc, utils_net
 from virttest.utils_misc import normalize_data_size
 
 from provider import virtio_fs_utils, virtio_mem_utils, win_driver_utils
@@ -28,6 +29,7 @@ driver_name_list = [
     "vioinput",
     "fwcfg",
     "viomem",
+    "viosock",
 ]
 
 device_hwid_list = [
@@ -42,6 +44,7 @@ device_hwid_list = [
     '"PCI\\VEN_1AF4&DEV_1052"',
     '"ACPI\\VEN_QEMU&DEV_0002"',
     r'"PCI\VEN_1AF4&DEV_1002" "PCI\VEN_1AF4&DEV_1058"',
+    r'"PCI\VEN_1AF4&DEV_1053" "PCI\VEN_1AF4&DEV_1012"',
 ]
 
 device_name_list = [
@@ -56,6 +59,7 @@ device_name_list = [
     "VirtIO Input Driver",
     "QEMU FwCfg Device",
     "VirtIO Viomem Driver",
+    "VirtIO Socket Driver",
 ]
 
 
@@ -449,3 +453,53 @@ def viomem_test(test, params, vm):
             virtio_mem_utils.check_memory_devices(
                 device_id, requested_size, threshold, vm, test
             )
+
+
+def viosock_test(test, params, vm):
+    """
+    Connect VM via vsock bridge service
+
+    :param test: kvm test object.
+    :param params: the dict used for parameters.
+    :param vm: vm object.
+    """
+    session = vm.wait_for_login()
+
+    LOG_JOB.info("Install and start openssh server service in guest")
+    openssh_src_path = utils_misc.set_winutils_letter(
+        session, params["openssh_src_path"]
+    )
+    openssh_dst_path = params["openssh_dst_path"]
+    session.cmd_status_output(
+        "xcopy %s %s /s /e /i /y" % (openssh_src_path, openssh_dst_path)
+    )
+    session.cmd_status_output(params["install_config_openssh"])
+
+    # Installer will install the service by default
+    LOG_JOB.info("Start vstbridge service in guest")
+    session.cmd_status_output(params["start_bridge_service"])
+
+    LOG_JOB.info("Start OpenSSH service after reboot VM")
+    session.cmd_status_output(params["start_openssh_service"])
+
+    LOG_JOB.info("Connect VM via vsock bridge service")
+    vsock_dev = params["vsocks"].split()[0]
+    guest_cid = vm.devices.get(vsock_dev).get_param("guest-cid")
+    conn_cmd = params["conn_cmd"] % (params["password"], guest_cid)
+    vsock_session = aexpect.Expect(
+        conn_cmd,
+        auto_close=False,
+        output_func=utils_logfile.log_line,
+        output_params=("vsock_%s_%s" % (guest_cid, 22),),
+    )
+    try:
+        time.sleep(10)
+        output = vsock_session.get_output()
+        if params["expect_output"] not in output:
+            test.fail("Connect to vsock bridge service failed,output is %s" % output)
+        else:
+            test.log.info("Connect to VM via vsock bridge successfully")
+    except Exception as e:
+        test.fail("Can not connect to VM via vsock bridge service due to %s" % e)
+    vsock_session.close()
+    session.close()

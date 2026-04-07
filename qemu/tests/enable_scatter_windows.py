@@ -57,8 +57,8 @@ def run(test, params, env):
                     % (status, output)
                 )
             is_started = utils_misc.wait_for(
-                lambda: not _is_process_finished(
-                    session_serial, params.get("windump_name")
+                lambda: (
+                    not _is_process_finished(session_serial, params.get("windump_name"))
                 ),
                 20,
                 5,

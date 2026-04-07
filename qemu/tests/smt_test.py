@@ -79,7 +79,7 @@ def run(test, params, env):
                 stress_test.load_stress_tool()
                 time.sleep(stress_duration / 2)
                 output = session.cmd_output_safe(params["get_cpu_usage_cmd"])
-                utils_misc.wait_for(lambda: (stress_test.app_running is False), 30)
+                utils_misc.wait_for(lambda: stress_test.app_running is False, 30)
                 stress_test.unload_stress()
                 cpu_usage = re.findall(r":\s*(\d+.?\d+)\s*us", output)
                 cpu_usage = [float(x) for x in cpu_usage]

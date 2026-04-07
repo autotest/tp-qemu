@@ -105,8 +105,9 @@ def run(test, params, env):
         finally:
             hp_config.cleanup()
             utils_misc.wait_for(
-                lambda: int(hp_config.get_node_num_huge_pages(node_id, hugepage_size))
-                == 0,
+                lambda: (
+                    int(hp_config.get_node_num_huge_pages(node_id, hugepage_size)) == 0
+                ),
                 first=2.0,
                 timeout=10,
             )

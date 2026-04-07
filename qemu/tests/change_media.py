@@ -84,7 +84,7 @@ def run(test, params, env):
     monitor.send_args_cmd(change_insert_cmd)
     test.log.info("Wait until device is ready")
     exists = utils_misc.wait_for(
-        lambda: (orig_img_name in str(monitor.info("block"))), timeout=10, first=3
+        lambda: orig_img_name in str(monitor.info("block")), timeout=10, first=3
     )
     if not exists:
         msg = "Fail to insert device %s to guest" % orig_img_name
@@ -96,7 +96,7 @@ def run(test, params, env):
         session.cmd(lock_cmd)
         error_context.context("mount cdrom to make status to locked", test.log.info)
         cdroms = utils_misc.wait_for(
-            lambda: (utils_test.get_readable_cdroms(params, session)), timeout=10
+            lambda: utils_test.get_readable_cdroms(params, session), timeout=10
         )
         if not cdroms:
             test.fail("Not readable cdrom found in your guest")

@@ -70,8 +70,9 @@ def run(test, params, env):
     except ShellTimeoutError:
         send_key(vm, key_to_install_driver)
     if utils_misc.wait_for(
-        lambda: params["check_info"]
-        in session.cmd_output(params["check_installation_cmd"]),
+        lambda: (
+            params["check_info"] in session.cmd_output(params["check_installation_cmd"])
+        ),
         30,
         15,
         5,

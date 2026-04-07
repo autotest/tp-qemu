@@ -30,7 +30,7 @@ def run(test, params, env):
     vm = img_utils.boot_vm_with_images(test, params, env, (params["convert_target"],))
     session = vm.wait_for_login(timeout=params.get_numeric("login_timeout", 360))
     cdroms = utils_misc.wait_for(
-        lambda: (utils_test.get_readable_cdroms(params, session)),
+        lambda: utils_test.get_readable_cdroms(params, session),
         timeout=params.get_numeric("timeout", 10),
     )
     session.close()

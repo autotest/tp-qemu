@@ -119,7 +119,6 @@ def run(test, params, env):
     env_process.preprocess_vm(test, params, env, params["main_vm"])
     vm = env.get_vm(params["main_vm"])
     session = vm.wait_for_serial_login(timeout=login_timeout)
-
     vbs_tool_ps_prefix = params["vbs_tool_ps_prefix"]
     vbs_tool_ps_suffix = params["vbs_tool_ps_suffix"]
     vbs_ready_info = params["vbs_ready_info"]

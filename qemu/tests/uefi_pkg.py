@@ -83,9 +83,8 @@ def run(test, params, env):
     if len(meta_files) > int(params["number_of_files"]):
         test.fail(
             "The number of JSON files should be less than or "
-            "equal to %s. The actual file list is %s",
-            params["number_of_files"],
-            meta_files,
+            "equal to %s. The actual file list is %s"
+            % (params["number_of_files"], meta_files)
         )
     error_context.context(
         "Check the 'filename' elements in both json files point to valid files.",

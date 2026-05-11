@@ -74,11 +74,11 @@ def run(test, params, env):
             "The actual output is '%s'" % output
         )
     query_files = params["query_files"] % ovmf_package[0]
-    file_suffix = params["file_suffix"]
+    file_regex = params["file_regex"]
     meta_files = []
     output = process.getoutput(query_files, shell=True)
     for line in output.splitlines():
-        if line.endswith(file_suffix):
+        if re.match(file_regex, line):
             meta_files.append(line)
     if len(meta_files) > int(params["number_of_files"]):
         test.fail(

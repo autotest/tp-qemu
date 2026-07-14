@@ -56,7 +56,12 @@ def run(test, params, env):
         remove_models(params.objects("cpu_model_2_12_0"))
     qemu_binary = utils_misc.get_qemu_binary(params)
     test.log.info("Query cpu models by qemu command")
-    query_cmd = "%s -cpu ? | awk '{print $2}'" % qemu_binary
+    # QEMU < 9.0: "x86 ModelName  description" (model is $2)
+    # QEMU >= 9.0: "  ModelName  description"   (model is $1)
+    query_cmd = (
+        "%s -cpu ? | awk '/^x86 /{print $2; next} /CPUID/{print $2; next}"
+        " {print $1}'" % qemu_binary
+    )
     qemu_binary_output = (
         process.system_output(query_cmd, shell=True).decode().splitlines()
     )

@@ -54,6 +54,11 @@ def run(test, params, env):
         remove_models(params.objects("cpu_model_3_1_0"))
     if host_qemu in VersionInterval("[,2.12.0)"):
         remove_models(params.objects("cpu_model_2_12_0"))
+    if host_qemu in VersionInterval("[,9.0.0)"):
+        remove_models(
+            params.objects("cpu_model_9_0_0")
+            or ["SapphireRapids-v3", "Icelake-Server-v7"]
+        )
     qemu_binary = utils_misc.get_qemu_binary(params)
     test.log.info("Query cpu models by qemu command")
     # QEMU < 9.0: "x86 ModelName  description" (model is $2)

@@ -1,3 +1,4 @@
+from avocado.utils import process
 from virttest import cpu, env_process, error_context
 
 from provider.cpu_utils import check_cpu_flags
@@ -20,6 +21,19 @@ def run(test, params, env):
     check_host_flags = params.get_boolean("check_host_flags")
     if check_host_flags:
         check_cpu_flags(params, flags, test)
+
+    check_cmd = params.get("check_cmd")
+    if check_cmd:
+        check_items = params["check_items"].split()
+        expect_result = params["expect_result"]
+        for item in check_items:
+            cmd = check_cmd % item if "%s" in check_cmd else check_cmd
+            out = process.getoutput(cmd).strip()
+            if expect_result not in out:
+                test.cancel(
+                    "Host '%s' status is '%s', expected '%s'"
+                    % (item, out or "unknown", expect_result)
+                )
 
     unsupported_models = params.get("unsupported_models", "")
     cpu_model = params.get("cpu_model")

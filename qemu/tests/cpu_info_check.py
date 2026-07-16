@@ -61,18 +61,29 @@ def run(test, params, env):
         )
     qemu_binary = utils_misc.get_qemu_binary(params)
     test.log.info("Query cpu models by qemu command")
-    # QEMU < 9.0: "x86 ModelName  description" (model is $2)
-    # QEMU >= 9.0: "  ModelName  description"   (model is $1)
-    query_cmd = (
-        "%s -cpu ? | awk '/^x86 /{print $2; next} /CPUID/{print $2; next}"
-        " {print $1}'" % qemu_binary
-    )
     qemu_binary_output = (
-        process.system_output(query_cmd, shell=True).decode().splitlines()
+        process.system_output("%s -cpu ?" % qemu_binary, shell=True)
+        .decode()
+        .splitlines()
     )
-    cpuid_index = qemu_binary_output.index("CPUID")
-    cpu_models_binary = qemu_binary_output[1 : cpuid_index - 1]
-    cpu_flags_binary = qemu_binary_output[cpuid_index + 1 :]
+    cpu_models_binary = []
+    cpu_flags_binary = []
+    in_flags = False
+    for line in qemu_binary_output:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("Available CPU"):
+            continue
+        if "CPUID" in stripped:
+            in_flags = True
+            continue
+        if in_flags:
+            cpu_flags_binary.extend(stripped.split())
+        else:
+            parts = line.split()
+            if parts[0] == "x86":
+                cpu_models_binary.append(parts[1])
+            else:
+                cpu_models_binary.append(parts[0])
     params["start_vm"] = "yes"
     vm_name = params["main_vm"]
     env_process.preprocess_vm(test, params, env, vm_name)

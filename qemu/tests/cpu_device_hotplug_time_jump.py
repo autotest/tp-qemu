@@ -42,11 +42,17 @@ def run(test, params, env):
     time1 = float(
         re.findall(r"^\[\s*(\d+\.?\d+)\].*CPU.*has been hot-added$", output, re.M)[0]
     )
-    time2 = float(
-        re.findall(
-            r"^\[\s*(\d+\.?\d+)\].*Will online and init " "hotplugged CPU", output, re.M
-        )[0]
+    # Kernel >= 6.11 (c1385c1f0ba3) removed "Will online and init
+    # hotplugged CPU" message; also match "Booting Node" from smpboot.
+    matches = re.findall(
+        r"^\[\s*(\d+\.?\d+)\].*(?:Will online and init hotplugged CPU"
+        r"|Booting Node.*Processor.*APIC)",
+        output,
+        re.M,
     )
+    if not matches:
+        test.error("Could not find CPU online message in dmesg")
+    time2 = float(matches[0])
     time_gap = time2 - time1
     test.log.info("The time gap is %.6fs", time_gap)
     expected_gap = params.get_numeric("expected_gap", target_type=float)

@@ -58,10 +58,12 @@ def run(test, params, env):
     max_vms_cmd = params.get("max_vms_cmd")
     if max_vms_cmd:
         max_vms = int(process.system_output(max_vms_cmd, shell=True))
+        test.log.info("VM count: %s", max_vms)
         for i in range(1, max_vms):
             params["vms"] += " vm_%s" % i
         max_smp = int(process.system_output(params["max_vcpu_cmd"], shell=True))
         params["smp"] = max_smp // max_vms
+        test.log.info("VM vcpus: %s", params["smp"])
 
     # Define vm memory size for multi vcpus scenario
     if params.get_numeric("smp") > 1:
@@ -70,6 +72,7 @@ def run(test, params, env):
         )
         vm_num = len(params.get("vms").split())
         params["mem"] = int(MemFree // (2 * vm_num))
+        test.log.info("VM memory: %s MB", params["mem"])
 
     vms = params.objects("vms")
     vms_queue = []

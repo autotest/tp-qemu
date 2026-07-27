@@ -66,6 +66,7 @@ def run(test, params, env):
         cpu_model = model
         guest_model = model_pattern % ""
     else:
+        test.log.info("Supported models: %s", ",".join(models))
         test.cancel("This host doesn't support cpu model %s" % model)
 
     family_id = int(cpu.get_family())

@@ -55,7 +55,9 @@ def run(test, params, env):
             normalize_data_size("%s KB" % get_mem_info(attr="MemFree"), "M")
         )
         vm_num = len(params.get("vms").split())
-        params["mem"] = MemFree // (2 * vm_num)
+        mem_limit = int(MemFree // (2 * vm_num))
+        if int(params["mem"]) > mem_limit:
+            params["mem"] = mem_limit
 
     vms = params.objects("vms")
     vms_queue = []

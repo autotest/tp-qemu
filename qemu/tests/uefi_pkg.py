@@ -74,18 +74,17 @@ def run(test, params, env):
             "The actual output is '%s'" % output
         )
     query_files = params["query_files"] % ovmf_package[0]
-    file_suffix = params["file_suffix"]
+    file_regex = params["file_regex"]
     meta_files = []
     output = process.getoutput(query_files, shell=True)
     for line in output.splitlines():
-        if line.endswith(file_suffix):
+        if re.match(file_regex, line):
             meta_files.append(line)
     if len(meta_files) > int(params["number_of_files"]):
         test.fail(
             "The number of JSON files should be less than or "
-            "equal to %s. The actual file list is %s",
-            params["number_of_files"],
-            meta_files,
+            "equal to %s. The actual file list is %s"
+            % (params["number_of_files"], meta_files)
         )
     error_context.context(
         "Check the 'filename' elements in both json files point to valid files.",

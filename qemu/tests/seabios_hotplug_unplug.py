@@ -52,12 +52,14 @@ def run(test, params, env):
             test.fail("Could not get boot menu list")
         return (boot_list, boot_menu)
 
-    def check_in_guest():
+    def check_in_guest(nic_index=0):
         session = vm.wait_for_serial_login(timeout=timeout, restart_network=True)
         error_context.context("Check kernel crash message!", test.log.info)
         vm.verify_kernel_crash()
         error_context.context("Ping guest!", test.log.info)
-        guest_ip = vm.get_address()
+        guest_ip = vm.wait_for_get_address(nic_index, timeout=60)
+        if guest_ip is None:
+            test.fail(f"Failed to get address of nic {nic_index}")
         status, output = utils_test.ping(guest_ip, count=10, timeout=20)
         if status:
             test.fail("Ping guest failed!")
@@ -139,8 +141,9 @@ def run(test, params, env):
 
     test.log.info("Hotplug '%s' nic named '%s'", nic_model, nic_name)
     hotplug_nic = vm.hotplug_nic(**nic_params)
+    hotplug_nic_index = len(vm.virtnet) - 1
 
-    check_in_guest()
+    check_in_guest(hotplug_nic_index)
 
     error_context.context("Restart guest after hotplug", test.log.info)
     vm.system_reset()
@@ -158,7 +161,7 @@ def run(test, params, env):
         test.fail("Hotplugged virtio nic is not in boot menu list")
 
     vm.send_key(str(boot_device))
-    check_in_guest()
+    check_in_guest(hotplug_nic_index)
 
     error_context.context("Hotunplugging", test.log.info)
     for dev in disk_hotplugged:

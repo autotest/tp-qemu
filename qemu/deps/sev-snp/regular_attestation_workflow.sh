@@ -34,6 +34,9 @@ fetch_retry() {
     return 1
 }
 
+version=$(snpguest -V)
+echo "snpguest version: $version"
+
 # Verify regular attestation workflow on snp guest
 snpguest report attestation-report.bin request-data.txt --random
 if [[ ! -f attestation-report.bin ]]; then

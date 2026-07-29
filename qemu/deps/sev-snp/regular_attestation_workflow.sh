@@ -67,6 +67,11 @@ esac
 (set -x; snpguest verify certs ./)
 check_status "Failed to verify certificates."
 
+# print certificates
+for cert in *.pem; do
+    (set -x; openssl x509 -in $cert -text)
+done
+
 case "$version" in
     0.8.*)
         (set -x; snpguest verify attestation ./ attestation-report.bin)

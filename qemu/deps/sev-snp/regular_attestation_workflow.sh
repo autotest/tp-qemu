@@ -22,6 +22,7 @@ fetch_retry() {
     local retry_count=0
 
     while (( retry_count < max_retries )); do
+        echo "[$retry_count/$max_retries] try: $command"
         eval "$command"
         if [[ $? -eq 0 ]]; then
             return 0
@@ -38,12 +39,12 @@ version=$(snpguest -V)
 echo "snpguest version: $version"
 
 # Verify regular attestation workflow on snp guest
-snpguest report attestation-report.bin request-data.txt --random
+(set -x; snpguest report attestation-report.bin request-data.txt --random)
 if [[ ! -f attestation-report.bin ]]; then
     echo "attestation-report.bin not created."
     exit 1
 fi
-snpguest display report attestation-report.bin
+(set -x; snpguest display report attestation-report.bin)
 check_status "Failed display attestation-report."
 
 # Fetch cert
@@ -54,7 +55,7 @@ fetch_retry "snpguest fetch vcek -p ${cpu_model} pem ./ attestation-report.bin"
 check_status "Failed to fetch VCEK certificate."
 
 # Verify certs
-snpguest verify certs ./
+(set -x; snpguest verify certs ./)
 check_status "Failed to verify certificates."
-snpguest verify attestation -p ${cpu_model} ./ attestation-report.bin
+(set -x; snpguest verify attestation -p ${cpu_model} ./ attestation-report.bin)
 check_status "Failed to verify attestation."

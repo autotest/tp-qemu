@@ -18,8 +18,11 @@ cleanup() {
 trap cleanup EXIT
 
 # Start tests
-PCKIDRetrievalTool
-pccsadmin collect
+(
+    set -x
+    PCKIDRetrievalTool
+    pccsadmin collect
+)
 # Check if platform_list.json was generated
 if [ ! -f platform_list.json ]; then
     echo "Pccsadmin collect failed, platform_list.json was not generated."

@@ -58,6 +58,12 @@ def run(test, params, env):
     mem_host = utils_memory.memtotal() / 1024
     vmem = int(mem_host * over_c / guest_number)
 
+    test.log.info("host memory      : %d", mem_host)
+    test.log.info("overcommit       : %f", over_c)
+    test.log.info("guest number     : %d", guest_number)
+    test.log.info(" -> guest memory : %d", vmem)
+    test.log.info(" -> total memory : %d", guest_number * vmem)
+
     if vmem < 256:
         test.cancel(
             "The memory size set for guest is too small."

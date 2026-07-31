@@ -1,17 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 import io
 import sys
 import uuid
 import hashlib
+import tempfile
 from base64 import b64encode
 from pyasn1_modules import pem
 import ssl
 from OpenSSL import crypto
 import ecdsa
-
-quotefile = sys.argv[1]
 
 def intle(data):
     return int.from_bytes(data, 'little')
@@ -395,16 +394,42 @@ class TDQuoteV4:
             data = fh.read()
             return TDQuoteV4.from_bytes(data)
 
+def verify_quote(quotebytes):
+    quote = TDQuoteV4.from_bytes(quotebytes)
+    print(quote)
 
-quote = TDQuoteV4.from_file(quotefile)
-print(quote)
+    retval = 0
+    ok = "PASS"
+    if not quote.verify_tdreport():
+        ok = "FAIL"
+        retval = 1
+    print(f"Verifying TD report: {ok}")
 
-ok = "PASS"
-if not quote.verify_tdreport():
-    ok = "FAIL"
-print(f"Verifying TD report: {ok}")
+    ok = "PASS"
+    if not quote.verify_qereport():
+        ok = "FAIL"
+        retval = 1
+    print(f"Verifying QE report: {ok}")
+    return retval
 
-ok = "PASS"
-if not quote.verify_qereport():
-    ok = "FAIL"
-print(f"Verifying QE report: {ok}")
+def make_quote():
+    report = tempfile.mkdtemp(dir = '/sys/kernel/config/tsm/report',
+                              prefix = 'report')
+    print(f'Using directory: {report}')
+    with open('/dev/urandom', 'rb') as rng:
+        inblob = rng.read(64)
+    with open(f'{report}/inblob', 'wb') as f:
+        f.write(inblob)
+    with open(f'{report}/outblob', 'rb') as f:
+        quote = f.read()
+    return quote
+
+def main():
+    quote = make_quote();
+    if len(quote) == 0:
+        print("Create quote: FAIL")
+        return 1
+    return verify_quote(quote);
+
+if __name__ == '__main__':
+    sys.exit(main())

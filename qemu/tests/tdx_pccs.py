@@ -51,6 +51,8 @@ def run(test, params, env):
         tdx_dcap.verify_dcap_services(all_services)
 
     # Test pccsadmin tool
+    if os.environ.get("PCCS_PRIMARY_API_KEY") is None:
+        test.cancel("Missing PCCS API key (in PCCS_PRIMARY_API_KEY env var)")
     pccsadmin_script = params.get("pccsadmin_script")
     pccs_admin_token = params.get("pccs_admin_token")
     pccs_port = params.get("pccs_port")

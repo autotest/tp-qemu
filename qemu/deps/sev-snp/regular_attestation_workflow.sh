@@ -35,6 +35,9 @@ fetch_retry() {
     return 1
 }
 
+(set -x; snpguest ok)
+check_status "SNP hardware check failed."
+
 output="$(snpguest -V)"
 version="${output#snpguest }"
 echo "snpguest version: $version"

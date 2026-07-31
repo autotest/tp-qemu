@@ -106,7 +106,6 @@ class TDXDcap(object):
         host_file = os.path.join(deps_dir, host_script)
         try:
             self._vm.copy_files_to(host_file, guest_dir)
-            session.cmd_output("chmod 755 %s" % guest_cmd)
         except Exception as e:
             self._test.fail("Guest test preparation fail: %s" % str(e))
         s = session.cmd_status(guest_cmd, timeout=360)

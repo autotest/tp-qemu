@@ -1,16 +1,17 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 
-import io
-import sys
-import uuid
 import hashlib
-import tempfile
-from base64 import b64encode
-from pyasn1_modules import pem
+import io
 import ssl
-from OpenSSL import crypto
+import sys
+import tempfile
+import uuid
+
 import ecdsa
+from OpenSSL import crypto
+from pyasn1_modules import pem
+
 
 def intle(data):
     return int.from_bytes(data, 'little')
@@ -82,7 +83,7 @@ class TDAttr:
                           f"Use svisor prot keys: {self.use_svisor_prot_keys}",
                           f"Use key locker: {self.use_key_locker}",
                           f"Perfmon: {self.perfmon}"])
-        
+
     def from_bytes(data):
         def bit(n):
             bit = n % 8
@@ -182,7 +183,7 @@ class ECDSA256QuoteSignature:
         qecertdata = QECertificationDataV4.from_bytes(data[128:])
 
         return ECDSA256QuoteSignature(signature, ecdsaattkey, qecertdata)
-        
+
 
 # A.3.9. QE Certification Data – Version 4
 class QECertificationDataV4:
@@ -246,7 +247,7 @@ class EnclaveReportBody:
             f"ISV Prod ID: {self.isvprodid}",
             f"ISV SVN: {self.isvsvn}",
             f"Report data: {self.reportdata.hex()}"])
-        
+
     def from_bytes(data):
         cpusvn = data[0:16]
         miscselect = intle(data[16:20])
@@ -350,7 +351,7 @@ class TDQuoteV4:
             f"Header: {indent(self.header)}",
             f"Body: {indent(self.body)}",
             f"Signature: {indent(self.sig)}"])
-        
+
     def verify_tdreport(self):
         vk = ecdsa.VerifyingKey.from_string(self.sig.ecdsaattkey,
                                             curve=ecdsa.NIST256p)
@@ -364,7 +365,7 @@ class TDQuoteV4:
         report = self.sig.qecertdata.qereportcertdata
 
         cert = report.qecertdata.pckcertchain.certs[0]
-        
+
         pubKeyObject = cert.get_pubkey()
         pubKeyString = crypto.dump_publickey(crypto.FILETYPE_PEM, pubKeyObject)
 
@@ -374,7 +375,7 @@ class TDQuoteV4:
             return True
         except Exception:
             return False
-        
+
     def from_bytes(data):
         header = TDQuoteHeader.from_bytes(data[0:48])
         body = TDQuoteBody.from_bytes(data[48:632])
@@ -425,11 +426,11 @@ def make_quote():
     return quote
 
 def main():
-    quote = make_quote();
+    quote = make_quote()
     if len(quote) == 0:
         print("Create quote: FAIL")
         return 1
-    return verify_quote(quote);
+    return verify_quote(quote)
 
 if __name__ == '__main__':
     sys.exit(main())

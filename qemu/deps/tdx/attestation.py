@@ -98,7 +98,7 @@ class TDAttr:
 
         for i in range((len(data) * 8)):
             if i not in [0, 28, 30, 31, 63]:
-                assert(bit(i) == False)
+                assert(not bit(i))
 
         return TDAttr(debug_mode, sept_ve_disable, use_svisor_prot_keys,
                       use_key_locker, perfmon)
@@ -212,13 +212,14 @@ class QECertificationDataV4:
         certdatatype = intle(data[0:2])
         assert(certdatatype in [5, 6])
         certdatalen = intle(data[2:6])
+        certdata = data[6:6+certdatalen]
 
         qereportcertdata = None
         pckcertchain = None
         if certdatatype == 5:
-            pckcertchain = PCKCertChain.from_bytes(data[6:6+certdatalen])
+            pckcertchain = PCKCertChain.from_bytes(certdata)
         elif certdatatype == 6:
-            qereportcertdata = QEReportCertificationData.from_bytes(data[6:6+certdatalen])
+            qereportcertdata = QEReportCertificationData.from_bytes(certdata)
 
         return QECertificationDataV4(certdatatype, qereportcertdata, pckcertchain)
 
@@ -251,18 +252,18 @@ class EnclaveReportBody:
     def from_bytes(data):
         cpusvn = data[0:16]
         miscselect = intle(data[16:20])
-        reserved = data[20:48]
+        #reserved = data[20:48]
         #assert(reserved == bytes([0] * 28))
         attrs = data[48:64]
         mrenclave = data[64:96]
-        reserved = data[96:128]
+        #reserved = data[96:128]
         #assert(reserved == bytes([0] * 28))
         mrsigner = data[128:160]
-        reserved = data[160:256]
+        #reserved = data[160:256]
         #assert(reserved == bytes([0] * 96))
         isvprodid = intle(data[256:258])
         isvsvn = intle(data[258:260])
-        reserved = data[260:320]
+        #reserved = data[260:320]
         reportdata = data[320:384]
 
         return EnclaveReportBody(cpusvn, miscselect, attrs, mrenclave,
@@ -299,7 +300,8 @@ class QEReportCertificationData:
 
         qecertdata = QECertificationDataV4.from_bytes(data[450+qeauthdatalen:])
 
-        return QEReportCertificationData(qereport, qereporthash, qereportsig, qeauthdata, qecertdata)
+        return QEReportCertificationData(qereport, qereporthash, qereportsig,
+                                         qeauthdata, qecertdata)
 
 class PCKCertChain:
 
@@ -308,7 +310,8 @@ class PCKCertChain:
 
     def __repr__(self):
         def cert_name(x509name):
-            return "/".join([d[0].decode() + "=" + d[1].decode() for d in x509name.get_components()])
+            return "/".join([d[0].decode() + "=" + d[1].decode()
+                             for d in x509name.get_components()])
 
         return "\n".join([
             "=> PCK Cert chain",
@@ -380,7 +383,7 @@ class TDQuoteV4:
         header = TDQuoteHeader.from_bytes(data[0:48])
         body = TDQuoteBody.from_bytes(data[48:632])
 
-        reportdigest = data[0:632]
+        #reportdigest = data[0:632]
         m = hashlib.sha256()
         m.update(data[0:632])
         tdreporthash = m.digest()

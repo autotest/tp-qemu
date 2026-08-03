@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 # SPDX-License-Identifier: GPL-2.0-or-later
+# pylint: disable=unsubscriptable-object
 
 import hashlib
 import io
@@ -51,6 +52,7 @@ class TDQuoteHeader:
                           f"QE vendor ID: {self.qevendorid}",
                           f"User data: {self.userdata.hex()}"])
 
+    @staticmethod
     def from_bytes(data):
         version = intle(data[0:2])
         attkeytype = intle(data[2:4])
@@ -84,6 +86,7 @@ class TDAttr:
                           f"Use key locker: {self.use_key_locker}",
                           f"Perfmon: {self.perfmon}"])
 
+    @staticmethod
     def from_bytes(data):
         def bit(n):
             bit = n % 8
@@ -140,6 +143,7 @@ class TDQuoteBody:
             f"RTMRs: {indent(rtmrs)}",
             f"Report data: {self.reportdata.hex()}"])
 
+    @staticmethod
     def from_bytes(data):
         teetcbsvn = data[0:16]
         mrseam = data[16:64]
@@ -177,6 +181,7 @@ class ECDSA256QuoteSignature:
                           f"ECDSA attestation key: {self.ecdsaattkey.hex()}",
                           f"QE Cert Data: {indent(self.qecertdata)}"])
 
+    @staticmethod
     def from_bytes(data):
         signature = data[0:64]
         ecdsaattkey = data[64:128]
@@ -208,6 +213,7 @@ class QECertificationDataV4:
                           f"QE Report cert data: {indent(self.qereportcertdata)}",
                           f"PCK Cert chain: {indent(self.pckcertchain)}"])
 
+    @staticmethod
     def from_bytes(data):
         certdatatype = intle(data[0:2])
         assert(certdatatype in [5, 6])
@@ -249,6 +255,7 @@ class EnclaveReportBody:
             f"ISV SVN: {self.isvsvn}",
             f"Report data: {self.reportdata.hex()}"])
 
+    @staticmethod
     def from_bytes(data):
         cpusvn = data[0:16]
         miscselect = intle(data[16:20])
@@ -288,6 +295,7 @@ class QEReportCertificationData:
             f"QE Auth Data: {self.qeauthdata.hex()}",
             f"QE Cert Data: {indent(self.qecertdata)}"])
 
+    @staticmethod
     def from_bytes(data):
         qereport = EnclaveReportBody.from_bytes(data[0:384])
         m = hashlib.sha256()
@@ -321,6 +329,7 @@ class PCKCertChain:
                        for c in self.certs])
             ])
 
+    @staticmethod
     def from_bytes(data):
         datafile = io.StringIO(data.decode())
         certs = []
@@ -379,6 +388,7 @@ class TDQuoteV4:
         except Exception:
             return False
 
+    @staticmethod
     def from_bytes(data):
         header = TDQuoteHeader.from_bytes(data[0:48])
         body = TDQuoteBody.from_bytes(data[48:632])
@@ -393,6 +403,7 @@ class TDQuoteV4:
 
         return TDQuoteV4(header, body, tdreporthash, sig)
 
+    @staticmethod
     def from_file(filename):
         with open(filename, "rb") as fh:
             data = fh.read()

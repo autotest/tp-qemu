@@ -50,6 +50,16 @@ def run(test, params, env):
         name_ib = " \\(with IBPB\\)"
 
     models = [x["name"] for x in out if not x["unavailable-features"]]
+    for x in out:
+        if x["name"] in (model, "%s-IBRS" % model, "%s-IBPB" % model):
+            if x["unavailable-features"]:
+                test.log.info(
+                    "Model %s unavailable features: %s",
+                    x["name"],
+                    x["unavailable-features"],
+                )
+            else:
+                test.log.info("Model %s: all features available", x["name"])
     if model_ib in models:
         cpu_model = model_ib
         guest_model = model_pattern % name_ib

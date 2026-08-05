@@ -94,14 +94,18 @@ def run(test, params, env):
             check_items = params.get("check_items").split()
             expect_result = params.get("expect_result")
             for item in vulnerabilities:
-                h_out = re.search(
-                    "Vulnerable|Mitigation|Not affected",
-                    process.getoutput(check_cmd % item),
-                )[0]
-                g_out = re.search(
-                    "Vulnerable|Mitigation|Not affected",
-                    session.cmd_output(check_cmd % item),
-                )[0]
+                h_raw = process.getoutput(check_cmd % item)
+                g_raw = session.cmd_output(check_cmd % item)
+                test.log.info("'%s': host='%s' guest='%s'", item, h_raw, g_raw)
+                h_match = re.search("Vulnerable|Mitigation|Not affected", h_raw)
+                g_match = re.search("Vulnerable|Mitigation|Not affected", g_raw)
+                if not h_match or not g_match:
+                    test.error(
+                        "Unrecognized vulnerability status for '%s':"
+                        " host='%s' guest='%s'" % (item, h_raw, g_raw)
+                    )
+                h_out = h_match[0]
+                g_out = g_match[0]
                 if h_out != g_out:
                     test.fail("Guest is not equal to Host with '%s'" % item)
                 if item in check_items and g_out != expect_result:

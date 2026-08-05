@@ -50,6 +50,9 @@ def run(test, params, env):
         name_ib = " \\(with IBPB\\)"
 
     models = [x["name"] for x in out if not x["unavailable-features"]]
+    models_map = {x["name"]: x for x in out}
+    optional_features = params.get("optional_features", "").split()
+
     for x in out:
         if x["name"] in (model, "%s-IBRS" % model, "%s-IBPB" % model):
             if x["unavailable-features"]:
@@ -60,6 +63,30 @@ def run(test, params, env):
                 )
             else:
                 test.log.info("Model %s: all features available", x["name"])
+
+    def _try_model(name):
+        """Check if model can run, possibly with optional features disabled."""
+        if name not in models_map:
+            return None, []
+        unavailable = models_map[name].get("unavailable-features", [])
+        if not unavailable:
+            return name, []
+        unexpected = [f for f in unavailable if f not in optional_features]
+        if unexpected:
+            test.log.info(
+                "Model %s has unexpected unavailable features: %s",
+                name,
+                unexpected,
+            )
+            return None, unavailable
+        test.log.warning(
+            "Model %s: host missing optional features %s, disabling them for this run",
+            name,
+            unavailable,
+        )
+        return name, unavailable
+
+    disabled = []
     if model_ib in models:
         cpu_model = model_ib
         guest_model = model_pattern % name_ib
@@ -68,7 +95,21 @@ def run(test, params, env):
         cpu_model = model
         guest_model = model_pattern % ""
     else:
-        test.cancel("This host doesn't support cpu model %s" % model)
+        cpu_model, disabled = _try_model(model_ib)
+        if cpu_model:
+            guest_model = model_pattern % name_ib
+            flags += flag_ib
+        else:
+            cpu_model, disabled = _try_model(model)
+            if cpu_model:
+                guest_model = model_pattern % ""
+            else:
+                test.cancel("This host doesn't support cpu model %s" % model)
+
+    if disabled:
+        disable_flags = ",".join("-%s" % f for f in disabled)
+        params["cpu_model_flags"] += "," + disable_flags
+        flags = " ".join(f for f in flags.split() if f not in disabled)
 
     params["cpu_model"] = cpu_model  # pylint: disable=E0606
     params["start_vm"] = "yes"

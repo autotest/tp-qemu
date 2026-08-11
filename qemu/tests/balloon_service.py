@@ -89,12 +89,19 @@ def run(test, params, env):
         mem_stat_working = False
         for bln_oper in blnsrv_operation:
             error_context.context("%s balloon service" % bln_oper, test.log.info)
+            windows_run = params.get("os_type") == "windows" and bln_oper == "run"
             balloon_test.operate_balloon_service(session, bln_oper)
 
             error_context.context(
                 "Balloon vm memory after %s balloon service" % bln_oper, test.log.info
             )
             balloon_memory(vm, mem_check, min_sz, max_sz)
+            if windows_run:
+                error_context.context(
+                    "Check Windows Event Log for WMI 5858 after service restart",
+                    test.log.info,
+                )
+                balloon_test.assert_no_wmi_error_5858(session)
             mem_stat_working = True
         # for windows guest, disable/uninstall driver to get memory leak based on
         # driver verifier is enabled

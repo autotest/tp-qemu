@@ -27,7 +27,11 @@ def run(test, params, env):
         :return: return True if find the process name; otherwise False
         """
         if params["os_type"] == "windows":
-            list_cmd = params.get("list_cmd", "wmic process get name")
+            list_cmd = params.get(
+                "list_cmd",
+                'powershell -command "Get-CimInstance Win32_Process'
+                ' | Select-Object -ExpandProperty Name"',
+            )
             output = session.cmd_output(list_cmd, timeout=60)
             process = re.findall("mplayer", output, re.M | re.I)
             return bool(process)

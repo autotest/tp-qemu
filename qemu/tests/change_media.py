@@ -113,7 +113,11 @@ def run(test, params, env):
         tmp_dir = params.get("tmp_dir", "c:\\")
         eject_tool = utils_misc.get_path(data_dir.get_deps_dir(), "cdrom/eject.exe")
         vm.copy_files_to(eject_tool, tmp_dir)
-        output = session.cmd("wmic cdrom get Drive", timeout=120)
+        output = session.cmd(
+            'powershell -command "Get-CimInstance Win32_CDROMDrive'
+            ' | Select-Object -ExpandProperty Drive"',
+            timeout=120,
+        )
         cd_vol = re.findall("[d-z]:", output, re.I)[0]
         lock_cmd = "%s\\eject.exe -i on %s" % (tmp_dir, cd_vol)
         (status, output) = session.cmd_status_output(lock_cmd)

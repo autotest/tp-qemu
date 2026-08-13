@@ -21,7 +21,11 @@ def check_bg_running(vm, params):
     if params["os_type"] == "linux":
         output = session.cmd_output_safe("pgrep -l %s" % target_process)
     else:
-        list_cmd = params.get("list_cmd", "wmic process get name")
+        list_cmd = params.get(
+            "list_cmd",
+            'powershell -command "Get-CimInstance Win32_Process'
+            ' | Select-Object -ExpandProperty Name"',
+        )
         output = session.cmd_output_safe(list_cmd, timeout=60)
     process = re.findall(target_process, output, re.M | re.I)
     session.close()

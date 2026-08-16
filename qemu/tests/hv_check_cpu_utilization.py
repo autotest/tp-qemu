@@ -11,14 +11,17 @@ LOG_JOB = logging.getLogger("avocado.test")
 
 def _check_cpu_usage(session):
     """
-    Check windows guest cpu usage by wmic. This function is used within
+    Check windows guest cpu usage via PowerShell. This function is used within
     utils_misc.wait_for(), to check cpu usage repeatedly.
 
-    param session: a session object to send wmic commands
+    param session: a session object to send PowerShell commands
     """
-    status, output = session.cmd_status_output("wmic cpu get loadpercentage /value")
+    status, output = session.cmd_status_output(
+        'powershell -command "Get-CimInstance Win32_Processor'
+        ' | Select-Object -ExpandProperty LoadPercentage"'
+    )
     if not status:
-        result = re.search(r"LoadPercentage=(\d+)", output)
+        result = re.search(r"(\d+)", output.strip())
         if result:
             percent = int(result.group(1))
             if percent > 1:

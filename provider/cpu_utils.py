@@ -82,8 +82,8 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo, test, devices=Non
         threads_matched = cpuinfo.threads == threads
     else:
         cmd = (
-            'powershell "Get-WmiObject Win32_processor | Format-List '
-            'NumberOfCores,ThreadCount"'
+            'powershell -command "Get-CimInstance Win32_Processor'
+            ' | Format-List NumberOfCores,ThreadCount"'
         )
         out = session.cmd_output_safe(cmd).strip()
         try:
@@ -95,29 +95,12 @@ def check_if_vm_vcpu_topology_match(session, os_type, cpuinfo, test, devices=Non
             cores = int(cpu_info[0]["NumberOfCores"])
             threads = int(cpu_info[0]["ThreadCount"])
         except KeyError:
-            LOG_JOB.warning(
-                "Attempt to get output via 'powershell' failed, "
-                "output returned by guest:\n%s",
+            LOG_JOB.error(
+                "Failed to get CPU info via PowerShell, output"
+                " returned by guest:\n%s",
                 out,
             )
-            LOG_JOB.info("Try again via 'wmic'")
-            cmd = "wmic CPU get NumberOfCores,ThreadCount /Format:list"
-            out = session.cmd_output_safe(cmd).strip()
-            try:
-                cpu_info = [
-                    dict(re.findall(r"(\w+)=(\d+)", cpu_out, re.M))
-                    for cpu_out in out.split("\n\n")
-                ]
-                sockets = len(cpu_info)
-                cores = int(cpu_info[0]["NumberOfCores"])
-                threads = int(cpu_info[0]["ThreadCount"])
-            except KeyError:
-                LOG_JOB.error(
-                    "Attempt to get output via 'wmic' failed, output"
-                    " returned by guest:\n%s",
-                    out,
-                )
-                return False
+            return False
         if devices:
             # Until QEMU 8.1 there was a different behaviour for thread count in case
             # of Windows guests. It represented number of threads per single core, not

@@ -34,7 +34,12 @@ def run(test, params, env):
 
     error_context.context("Disable security alert", test.log.info)
     win_dump_utils.disable_security_alert(params, session)
-    disk = sorted(session.cmd("wmic diskdrive get index").split()[1:])[-1]
+    disk = sorted(
+        session.cmd(
+            'powershell -command "Get-CimInstance Win32_DiskDrive'
+            ' | Select-Object -ExpandProperty Index"'
+        ).split()
+    )[-1]
     utils_disk.update_windows_disk_attributes(session, disk)
     disk_letter = utils_disk.configure_empty_disk(
         session, disk, params["image_size_stg"], params["os_type"]

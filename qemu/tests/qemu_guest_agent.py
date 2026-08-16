@@ -4852,8 +4852,10 @@ class QemuGuestAgentBasicCheckWin(QemuGuestAgentBasicCheck):
             """
             time.sleep(write_timeout)
             k_cmd = (
-                "wmic process where \"name='python.exe' and "
-                "CommandLine Like '%fsfreeze%'\" call terminate"
+                "powershell -command \"Get-CimInstance Win32_Process"
+                " -Filter 'Name=''python.exe'' and"
+                " CommandLine Like ''%fsfreeze%'''"
+                ' | Invoke-CimMethod -MethodName Terminate"'
             )
             s, o = session.cmd_status_output(k_cmd)
             if s:

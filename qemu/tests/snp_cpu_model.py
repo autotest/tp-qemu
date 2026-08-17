@@ -2,10 +2,11 @@ import json
 import os
 import re
 
-from avocado.utils import cpu, process
+from avocado.utils import process
 from virttest import data_dir as virttest_data_dir
 from virttest import error_context, utils_misc
 from virttest.utils_misc import verify_dmesg
+from virttest.vt_utils import cpu as vt_cpu
 
 
 @error_context.context_aware
@@ -68,23 +69,12 @@ def run(test, params, env):
     else:
         test.log.info("Supported models: %s", ",".join(models))
         test.cancel("This host doesn't support cpu model %s" % model)
+    try:
+        host_cpu_model = vt_cpu.verify_min_cpu_codename("milan")
+    except OSError as e:
+        test.cancel(str(e))
 
-    family_id = int(cpu.get_family())
-    model_id = int(cpu.get_model())
-    dict_cpu = {
-        "milan": [25, 0, 15],
-        "genoa": [25, 16, 31],
-        "bergamo": [25, 160, 175],
-        "turin": [26, 0, 31],
-    }
-    host_cpu_model = None
-    for platform, values in dict_cpu.items():
-        if values[0] == family_id:
-            if model_id >= values[1] and model_id <= values[2]:
-                host_cpu_model = platform
-    if not host_cpu_model:
-        test.cancel("Unsupported platform. Requires milan or above.")
-    test.log.info("Detected platform: %s", host_cpu_model)
+    test.log.info("Detected codename: %s", host_cpu_model)
 
     vm = env.get_vm(params["main_vm"])
     vm.params["cpu_model"] = cpu_model  # pylint: disable=E0606

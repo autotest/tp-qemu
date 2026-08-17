@@ -1,9 +1,9 @@
 import os
 
-from avocado.utils import cpu
 from virttest import data_dir as virttest_data_dir
 from virttest import env_process, error_context
 from virttest.utils_misc import get_mem_info, normalize_data_size, verify_dmesg
+from virttest.vt_utils import cpu as vt_cpu
 
 
 @error_context.context_aware
@@ -24,22 +24,11 @@ def run(test, params, env):
     error_context.context("Start sev-snp test", test.log.info)
     timeout = params.get_numeric("login_timeout", 240)
 
-    family_id = int(cpu.get_family())
-    model_id = int(cpu.get_model())
-    dict_cpu = {
-        "milan": [25, 0, 15],
-        "genoa": [25, 16, 31],
-        "bergamo": [25, 160, 175],
-        "turin": [26, 0, 31],
-    }
-    host_cpu_model = None
-    for platform, values in dict_cpu.items():
-        if values[0] == family_id:
-            if model_id >= values[1] and model_id <= values[2]:
-                host_cpu_model = platform
-    if not host_cpu_model:
-        test.cancel("Unsupported platform. Requires milan or above.")
-    test.log.info("Detected platform: %s", host_cpu_model)
+    try:
+        host_cpu_model = vt_cpu.verify_min_cpu_codename("milan")
+    except OSError as e:
+        test.cancel(str(e))
+    test.log.info("Detected codename: %s", host_cpu_model)
 
     snp_module_path = params["snp_module_path"]
     if os.path.exists(snp_module_path):

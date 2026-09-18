@@ -4,6 +4,8 @@ import time
 from avocado.utils import process
 from virttest import data_dir, env_process, error_context, utils_net, utils_netperf
 
+NF_CONNTRACK_MAX_PATH = "/proc/sys/net/nf_conntrack_max"
+
 
 # This decorator makes the test function aware of context strings
 @error_context.context_aware
@@ -41,8 +43,6 @@ def run(test, params, env):
     test.log.info("nf_conntrack_max_set_cmd is %s", nf_conntrack_max_set_cmd)
     msg = "TEST_STEP: Make sure nf_conntrack is disabled in host and guest."
     error_context.context(msg, test.log.info)
-    if str.encode("nf_conntrack") in process.system_output("lsmod"):
-        process.system_output(nf_conntrack_max_set_cmd)
 
     params["start_vm"] = "yes"
     error_context.context("Boot up guest", test.log.info)
@@ -150,7 +150,18 @@ def run(test, params, env):
         status_test_command=status_test_command,
         compile_option=compile_option_server,
     )
+    original_nf_conntrack_max = None
     try:
+        if b"nf_conntrack" in process.system_output("lsmod"):
+            original_nf_conntrack_max = (
+                process.system_output(f"cat {NF_CONNTRACK_MAX_PATH}").decode().strip()
+            )
+            test.log.info(
+                "Host nf_conntrack_max was %s; will restore after test",
+                original_nf_conntrack_max,
+            )
+            process.system_output(nf_conntrack_max_set_cmd, shell=True)
+
         error_context.base_context(
             "TEST_STEP: Run netperf test between host and guest."
         )
@@ -183,3 +194,8 @@ def run(test, params, env):
         netperf_server.cleanup(True)
         if session:
             session.close()
+        if original_nf_conntrack_max is not None:
+            process.system(
+                f"echo {original_nf_conntrack_max} > {NF_CONNTRACK_MAX_PATH}",
+                shell=True,
+            )

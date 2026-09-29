@@ -4,6 +4,8 @@ import time
 from avocado.utils import process
 from virttest import data_dir, env_process, error_context, utils_net, utils_netperf
 
+NF_CONNTRACK_MAX_PATH = "/proc/sys/net/nf_conntrack_max"
+
 
 # This decorator makes the test function aware of context strings
 @error_context.context_aware
@@ -11,16 +13,16 @@ def run(test, params, env):
     """
     QEMU flow caches stress test case, only for linux
 
-    1) Make sure nf_conntrack is disabled in host and guest.
-       If nf_conntrack is enabled in host, skip this case.
+    1) Keep nf_conntrack from throttling the stress (prep only):
+       - Host: if nf_conntrack is loaded, save nf_conntrack_max, raise
+         it for the run, restore the original value in finally
+         (does not unload the module; does not skip the test).
+       - Guest: try blacklist + reboot; if still loaded, raise
+         nf_conntrack_max (guest image is independent; no restore).
     2) Boot guest with vhost=on/off.
     3) Enable multi queues support in guest (optional).
     4) After installation of netperf, run netserver in host.
-    5) Run netperf TCP_CRR protocal test in guest.
-    6) Transfer file between guest and host.
-    7) Check the md5 of copied file.
-
-    This is a sample QEMU test, so people can get used to some of the test APIs.
+    5) Run netperf TCP_CRR protocol test in guest.
 
     :param test: QEMU test object.
     :param params: Dictionary with the test parameters.
@@ -33,16 +35,84 @@ def run(test, params, env):
 
         :param ifname: interface name
         """
-        cmd = "ethtool -l %s" % ifname
+        cmd = f"ethtool -l {ifname}"
         out = session.cmd_output(cmd)
         test.log.info(out)
 
-    nf_conntrack_max_set_cmd = params.get("nf_conntrack_max_set")
-    test.log.info("nf_conntrack_max_set_cmd is %s", nf_conntrack_max_set_cmd)
-    msg = "Make sure nf_conntrack is disabled in host and guest."
-    error_context.context(msg, test.log.info)
-    if str.encode("nf_conntrack") in process.system_output("lsmod"):
-        process.system_output(nf_conntrack_max_set_cmd)
+    def prepare_host_nf_conntrack():
+        """
+        If nf_conntrack is loaded on the host, raise nf_conntrack_max for stress.
+
+        :return: Previous nf_conntrack_max value to restore, or None if unchanged.
+        """
+        # Legacy single param kept as fallback for older cfg checkouts.
+        set_cmd = params.get(
+            "nf_conntrack_max_set_host", params.get("nf_conntrack_max_set")
+        )
+        test.log.info("nf_conntrack_max_set_host is %s", set_cmd)
+        error_context.context(
+            "Ensure nf_conntrack does not limit host connection stress.",
+            test.log.info,
+        )
+        if b"nf_conntrack" not in process.system_output("lsmod"):
+            return None
+
+        original = (
+            process.system_output(f"cat {NF_CONNTRACK_MAX_PATH}").decode().strip()
+        )
+        test.log.info(
+            "Host nf_conntrack_max was %s; will restore after test",
+            original,
+        )
+        process.system_output(set_cmd)
+        return original
+
+    def restore_host_nf_conntrack(original):
+        """Restore host nf_conntrack_max after prepare_host_nf_conntrack()."""
+        if original is None:
+            return
+        error_context.context(
+            f"Restore host nf_conntrack_max to {original}",
+            test.log.info,
+        )
+        process.system(f"echo {original} > {NF_CONNTRACK_MAX_PATH}", shell=True)
+
+    def prepare_guest_nf_conntrack(vm, session, timeout):
+        """
+        Prefer unloading nf_conntrack in the guest; if it stays loaded, raise max.
+
+        Guest image is treated as disposable (e.g. snapshot) — no restore.
+
+        :return: Guest session (possibly after reboot).
+        """
+        # Legacy single param kept as fallback for older cfg checkouts.
+        set_cmd = params.get(
+            "nf_conntrack_max_set_guest", params.get("nf_conntrack_max_set")
+        )
+        test.log.info("nf_conntrack_max_set_guest is %s", set_cmd)
+        if "nf_conntrack" not in session.cmd_output("lsmod"):
+            return session
+
+        error_context.context("Unload nf_conntrack module in guest.", test.log.info)
+        black_str = (
+            "#disable nf_conntrack\\nblacklist nf_conntrack\\n"
+            "blacklist nf_conntrack_ipv6\\nblacklist xt_conntrack\\n"
+            "blacklist nf_conntrack_ftp\\nblacklist xt_state\\n"
+            "blacklist iptable_nat\\nblacklist ipt_REDIRECT\\n"
+            "blacklist nf_nat\\nblacklist nf_conntrack_ipv4"
+        )
+        session.cmd(f"echo -e '{black_str}' >> /etc/modprobe.d/blacklist.conf")
+        session = vm.reboot(session, timeout=timeout)
+        if "nf_conntrack" in session.cmd_output("lsmod"):
+            error_context.context(
+                "nf_conntrack module still running in guest, "
+                "raise nf_conntrack_max instead.",
+                test.log.info,
+            )
+            session.cmd(set_cmd)
+        return session
+
+    host_nf_conntrack_max = prepare_host_nf_conntrack()
 
     params["start_vm"] = "yes"
     error_context.context("Boot up guest", test.log.info)
@@ -52,24 +122,7 @@ def run(test, params, env):
 
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
-    if "nf_conntrack" in session.cmd_output("lsmod"):
-        msg = "Unload nf_conntrack module in guest."
-        error_context.context(msg, test.log.info)
-        black_str = (
-            "#disable nf_conntrack\\nblacklist nf_conntrack\\n"
-            "blacklist nf_conntrack_ipv6\\nblacklist xt_conntrack\\n"
-            "blacklist nf_conntrack_ftp\\nblacklist xt_state\\n"
-            "blacklist iptable_nat\\nblacklist ipt_REDIRECT\\n"
-            "blacklist nf_nat\\nblacklist nf_conntrack_ipv4"
-        )
-        cmd = "echo -e '%s' >> /etc/modprobe.d/blacklist.conf" % black_str
-        session.cmd(cmd)
-        session = vm.reboot(session, timeout=timeout)
-        if "nf_conntrack" in session.cmd_output("lsmod"):
-            err = "nf_conntrack module still running in guest, "
-            err += "set nf_conntrack_max instead."
-            error_context.context(err, test.log.info)
-            session.cmd(nf_conntrack_max_set_cmd)
+    session = prepare_guest_nf_conntrack(vm, session, timeout)
 
     netperf_link = os.path.join(
         data_dir.get_deps_dir("netperf"), params.get("netperf_link")
@@ -86,13 +139,13 @@ def run(test, params, env):
         get_if_queues(ifname)
 
         try:
-            cmd = "ethtool -L %s combined %s" % (ifname, params.get("queues"))
+            cmd = f"ethtool -L {ifname} combined {params.get('queues')}"
             status, out = session.cmd_status_output(cmd)
         except Exception as err:
             get_if_queues(ifname)
-            msg = "Fail to enable multi queues support in guest."
-            msg += f"Got error: {err}"
-            test.error(msg)
+            test.error(
+                f"Fail to enable multi queues support in guest. Got error: {err}"
+            )
         test.log.info("Command %s set queues succeed", cmd)
 
     error_context.context("Setup netperf in guest", test.log.info)
@@ -154,9 +207,9 @@ def run(test, params, env):
         netperf_server.start()
 
         error_context.context(
-            "Start Netperf in guest for %ss." % netperf_timeout, test.log.info
+            f"Start Netperf in guest for {netperf_timeout}s.", test.log.info
         )
-        test_option = "-t TCP_CRR -l %s -- -b 10 -D" % netperf_timeout
+        test_option = f"-t TCP_CRR -l {netperf_timeout} -- -b 10 -D"
         netperf_client.bg_start(host_ip, test_option, client_num)
         start_time = time.time()
         deviation_time = params.get_numeric("deviation_time")
@@ -179,3 +232,5 @@ def run(test, params, env):
         netperf_server.cleanup(True)
         if session:
             session.close()
+        if host_nf_conntrack_max is not None:
+            restore_host_nf_conntrack(host_nf_conntrack_max)

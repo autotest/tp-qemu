@@ -4,6 +4,8 @@ import time
 from avocado.utils import process
 from virttest import data_dir, env_process, error_context, utils_net, utils_netperf
 
+NF_CONNTRACK_MAX_PATH = "/proc/sys/net/nf_conntrack_max"
+
 
 # This decorator makes the test function aware of context strings
 @error_context.context_aware
@@ -33,16 +35,14 @@ def run(test, params, env):
 
         :param ifname: interface name
         """
-        cmd = "ethtool -l %s" % ifname
+        cmd = f"ethtool -l {ifname}"
         out = session.cmd_output(cmd)
         test.log.info(out)
 
     nf_conntrack_max_set_cmd = params.get("nf_conntrack_max_set")
     test.log.info("nf_conntrack_max_set_cmd is %s", nf_conntrack_max_set_cmd)
-    msg = "Make sure nf_conntrack is disabled in host and guest."
+    msg = "TEST_STEP: Make sure nf_conntrack is disabled in host and guest."
     error_context.context(msg, test.log.info)
-    if str.encode("nf_conntrack") in process.system_output("lsmod"):
-        process.system_output(nf_conntrack_max_set_cmd)
 
     params["start_vm"] = "yes"
     error_context.context("Boot up guest", test.log.info)
@@ -53,7 +53,7 @@ def run(test, params, env):
     timeout = int(params.get("login_timeout", 360))
     session = vm.wait_for_login(timeout=timeout)
     if "nf_conntrack" in session.cmd_output("lsmod"):
-        msg = "Unload nf_conntrack module in guest."
+        msg = "TEST_STEP: Unload nf_conntrack module in guest."
         error_context.context(msg, test.log.info)
         black_str = (
             "#disable nf_conntrack\\nblacklist nf_conntrack\\n"
@@ -62,7 +62,7 @@ def run(test, params, env):
             "blacklist iptable_nat\\nblacklist ipt_REDIRECT\\n"
             "blacklist nf_nat\\nblacklist nf_conntrack_ipv4"
         )
-        cmd = "echo -e '%s' >> /etc/modprobe.d/blacklist.conf" % black_str
+        cmd = f"echo -e '{black_str}' >> /etc/modprobe.d/blacklist.conf"
         session.cmd(cmd)
         session = vm.reboot(session, timeout=timeout)
         if "nf_conntrack" in session.cmd_output("lsmod"):
@@ -80,13 +80,15 @@ def run(test, params, env):
     disable_firewall = params.get("disable_firewall", "")
 
     if int(params.get("queues", 1)) > 1 and params.get("os_type") == "linux":
-        error_context.context("Enable multi queues support in guest.", test.log.info)
+        error_context.context(
+            "TEST_STEP: Enable multi queues support in guest.", test.log.info
+        )
         guest_mac = vm.get_mac_address()
         ifname = utils_net.get_linux_ifname(session, guest_mac)
         get_if_queues(ifname)
 
         try:
-            cmd = "ethtool -L %s combined %s" % (ifname, params.get("queues"))
+            cmd = f"ethtool -L {ifname} combined {params.get('queues')}"
             status, out = session.cmd_status_output(cmd)
         except Exception as err:
             get_if_queues(ifname)
@@ -95,7 +97,7 @@ def run(test, params, env):
             test.error(msg)
         test.log.info("Command %s set queues succeed", cmd)
 
-    error_context.context("Setup netperf in guest", test.log.info)
+    error_context.context("TEST_STEP: Setup netperf in guest", test.log.info)
     if params.get("os_type") == "linux":
         session.cmd(disable_firewall, ignore_all_errors=True)
         g_client_link = netperf_link
@@ -126,7 +128,7 @@ def run(test, params, env):
         compile_option=compile_option_client,
     )
 
-    error_context.context("Setup netperf in host", test.log.info)
+    error_context.context("TEST_STEP: Setup netperf in host", test.log.info)
     host_ip = utils_net.get_host_ip_address(params)
     server_path = params.get("server_path", "/var/tmp/")
     server_shell_client = params.get("server_shell_client", "ssh")
@@ -148,15 +150,28 @@ def run(test, params, env):
         status_test_command=status_test_command,
         compile_option=compile_option_server,
     )
+    original_nf_conntrack_max = None
     try:
-        error_context.base_context("Run netperf test between host and guest.")
+        if b"nf_conntrack" in process.system_output("lsmod"):
+            original_nf_conntrack_max = (
+                process.system_output(f"cat {NF_CONNTRACK_MAX_PATH}").decode().strip()
+            )
+            test.log.info(
+                "Host nf_conntrack_max was %s; will restore after test",
+                original_nf_conntrack_max,
+            )
+            process.system_output(nf_conntrack_max_set_cmd, shell=True)
+
+        error_context.base_context(
+            "TEST_STEP: Run netperf test between host and guest."
+        )
         error_context.context("Start netserver in host.", test.log.info)
         netperf_server.start()
 
         error_context.context(
-            "Start Netperf in guest for %ss." % netperf_timeout, test.log.info
+            f"Start Netperf in guest for {netperf_timeout}s.", test.log.info
         )
-        test_option = "-t TCP_CRR -l %s -- -b 10 -D" % netperf_timeout
+        test_option = f"-t TCP_CRR -l {netperf_timeout} -- -b 10 -D"
         netperf_client.bg_start(host_ip, test_option, client_num)
         start_time = time.time()
         deviation_time = params.get_numeric("deviation_time")
@@ -172,10 +187,15 @@ def run(test, params, env):
         if netperf_client.is_netperf_running():
             test.fail("netperf still running, netperf hangs")
         else:
-            test.log.info("netperf runs successfully")
+            test.log.info("TEST_RESULT: netperf runs successfully")
     finally:
         netperf_server.stop()
         netperf_client.cleanup(True)
         netperf_server.cleanup(True)
         if session:
             session.close()
+        if original_nf_conntrack_max is not None:
+            process.system(
+                f"echo {original_nf_conntrack_max} > {NF_CONNTRACK_MAX_PATH}",
+                shell=True,
+            )

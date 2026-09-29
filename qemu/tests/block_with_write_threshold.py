@@ -59,7 +59,12 @@ def run(test, params, env):
             extra_params = params["blk_extra_params_%s" % data_img_tag]
             drive_id = re.search(r"(serial|wwn)=(\w+)", extra_params, re.M).group(2)
             return utils_misc.get_linux_drive_path(session, drive_id)
-        return sorted(session.cmd("wmic diskdrive get index").split()[1:])[-1]
+        return sorted(
+            session.cmd(
+                'powershell -command "Get-CimInstance Win32_DiskDrive'
+                ' | Select-Object -ExpandProperty Index"'
+            ).split()
+        )[-1]
 
     def _io_stress_linux(target):
         session.cmd(params["dd_cmd"] % target, 180)

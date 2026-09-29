@@ -70,8 +70,9 @@ def run(test, params, env):
         cd_exp_map = {"linux": r"sr([0-9])", "windows": r"(\w):"}
         get_cd_map = {
             "linux": "lsblk -nb",
-            "windows": "wmic logicaldisk where (Description="
-            "'CD-ROM Disc') get DeviceID",
+            "windows": 'powershell -command "Get-CimInstance Win32_LogicalDisk'
+            " -Filter 'Description=''CD-ROM Disc'''"
+            ' | Select-Object -ExpandProperty DeviceID"',
         }
         letters = utils_misc.wait_for(
             lambda: re.findall(

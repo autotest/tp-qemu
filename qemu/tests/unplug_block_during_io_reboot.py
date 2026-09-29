@@ -39,7 +39,12 @@ def run(test, params, env):
         """Get the data disk."""
         extra_params = params["blk_extra_params_%s" % params["images"].split()[-1]]
         if windows:
-            return sorted(session.cmd("wmic diskdrive get index").split()[1:])[-1]
+            return sorted(
+                session.cmd(
+                    'powershell -command "Get-CimInstance Win32_DiskDrive'
+                    ' | Select-Object -ExpandProperty Index"'
+                ).split()
+            )[-1]
         drive_id = re.search(r"(serial|wwn)=(\w+)", extra_params, re.M).group(2)
         return utils_misc.get_linux_drive_path(session, drive_id)
 

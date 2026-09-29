@@ -13,7 +13,12 @@ def find_all_disks(session, windows):
     """Find all disks in guest."""
     global all_disks
     if windows:
-        all_disks = set(session.cmd("wmic diskdrive get index").split()[1:])
+        all_disks = set(
+            session.cmd(
+                'powershell -command "Get-CimInstance Win32_DiskDrive'
+                ' | Select-Object -ExpandProperty Index"'
+            ).split()
+        )
     else:
         all_disks = utils_misc.list_linux_guest_disks(session)
     return all_disks
@@ -29,8 +34,10 @@ def wait_plug_disks(session, action, disks_before_plug, excepted_num, windows, t
         step=1.5,
     ):
         disks_info_win = (
-            "wmic logicaldisk get drivetype,name,description "
-            "& wmic diskdrive list brief /format:list"
+            'powershell -command "Get-CimInstance Win32_LogicalDisk'
+            " | Format-List DriveType,Name,Description;"
+            " Get-CimInstance Win32_DiskDrive"
+            ' | Format-List Caption,DeviceID,Size"'
         )
         disks_info_linux = "lsblk -a"
         disks_info = session.cmd(disks_info_win if windows else disks_info_linux)

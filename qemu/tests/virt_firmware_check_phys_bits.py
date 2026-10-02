@@ -1,7 +1,31 @@
 import re
 
-from avocado.utils import process
-from virttest import env_process, error_context, utils_package, virt_vm
+from virttest import env_process, error_context, virt_vm
+
+
+def get_host_phys_bits(test):
+    """
+    Get the host phys-bits from CPUID leaf 0x80000008, which is the very
+    same source QEMU uses for the host-phys-bits property, see
+    host_cpu_phys_bits() in target/i386/host-cpu.c.
+
+    /proc/cpuinfo must not be used here: when memory encryption is enabled
+    some bits are taken from the physical address, and the kernel subtracts
+    them from the width it reports there, while CPUID, and so QEMU, keeps
+    reporting the full width.
+
+    :param test: QEMU test object
+    :return: the host phys-bits as an integer
+    """
+    try:
+        with open("/dev/cpu/0/cpuid", "rb") as cpuid_dev:
+            cpuid_dev.seek(0x80000008)
+            # the driver only accepts reads that are a multiple of its
+            # 16 bytes chunk, one {eax,ebx,ecx,edx} tuple per leaf
+            regs = cpuid_dev.read(16)
+            return int.from_bytes(regs[:4], "little") & 0xFF
+    except OSError as details:
+        test.error("Failed to read CPUID leaf 0x80000008: %s" % details)
 
 
 @error_context.context_aware
@@ -38,11 +62,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
     phys_bits_grep_cmd = params["phys_bits_grep_cmd"]
-    host_phys_bits = process.getoutput(phys_bits_grep_cmd, shell=True).strip()
-    if not host_phys_bits.isdigit():
-        test.error(
-            "Failed to get host phys-bits, the actual output is '%s'" % host_phys_bits
-        )
+    host_phys_bits = get_host_phys_bits(test)
     host_phys_bits_limit = params["host_phys_bits_limit"]
     params["cpu_model_flags"] %= host_phys_bits_limit
     err_msg = params.get("err_msg")
@@ -84,30 +104,7 @@ def run(test, params, env):
         error_context.context("Check the phys-bits in guest.", test.log.info)
         session = vm.wait_for_login()
         guest_phys_bits = int(session.cmd_output(phys_bits_grep_cmd).strip())
-        sev_status = sev_es_status = False
-        if params.get("check_sev_cmd"):
-            output = process.getoutput(params["check_sev_cmd"], shell=True)
-            if output in params["enabled_status"]:
-                sev_status = True
-        if params.get("check_sev_es_cmd"):
-            output = process.getoutput(params["check_sev_es_cmd"], shell=True)
-            if output in params["enabled_status"]:
-                sev_es_status = True
-        if sev_status or sev_es_status:
-            install_status = utils_package.package_install("sevctl")
-            if not install_status:
-                test.error("Failed to install sevctl.")
-            encryption_bits_grep_cmd = params["encryption_bits_grep_cmd"]
-            host_memory_encryption_bits = process.getoutput(
-                encryption_bits_grep_cmd, shell=True
-            ).strip()
-            if not host_memory_encryption_bits.isdigit():
-                test.error(
-                    "Failed to get host memory encryption bits, the "
-                    "actual output is '%s'" % host_memory_encryption_bits
-                )
-            host_phys_bits = int(host_phys_bits) + int(host_memory_encryption_bits)
-        expected_phys_bits = min(int(host_phys_bits), int(host_phys_bits_limit))
+        expected_phys_bits = min(host_phys_bits, int(host_phys_bits_limit))
         session.close()
         err_str = "The phys-bits in guest, it dosen't equal to expected value."
         err_str += "The expected value is %s, but the actual value is %s."

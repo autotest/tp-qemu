@@ -78,7 +78,7 @@ def run(test, params, env):
         vm.verify_alive()
     except (virt_vm.VMCreateError, virt_vm.VMStartError) as e:
         if err_msg:
-            if err_msg not in str(e):
+            if not re.search(err_msg, str(e), re.S | re.I):
                 test.fail(
                     "Boot a vm with invalid phys-bits '%s', "
                     "the error message is not the expected value "

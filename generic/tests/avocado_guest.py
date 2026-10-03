@@ -13,11 +13,12 @@ def run(test, params, env):
     vm.verify_alive()
     timeout = int(params.get("test_timeout", 3600))
     testlist = []
-    avocadoinstalltype = params.get("avocadoinstalltype", "pip")
+    avocadoinstalltype = params.get("avocadoinstalltype", "git")
     avocadotestrepo = params.get(
         "avocadotestrepo",
         "https://github.com/avocado-framework-tests/avocado-misc-tests.git",
     )
+    avocadotestbranch = params.get("avocadotestbranch", "master")
     avocadotest = params.get("avocadotest", "cpu/ebizzy.py")
     avocadomux = params.get("avocadomux", "")
     avocadotestargs = params.get("avocadotestargs", "")
@@ -35,9 +36,12 @@ def run(test, params, env):
         testlist,
         timeout=timeout,
         testrepo=avocadotestrepo,
+        testbranch=avocadotestbranch,
         installtype=avocadoinstalltype,
         reinstall=False,
         add_args=avocadotestargs,
-        ignore_result=False,
+        ignore_result=True,
     )
-    avocado_obj.run_avocado()
+    result = avocado_obj.run_avocado()
+    if not result:
+        test.fail("Avocado test failed. Please look into debug.log")

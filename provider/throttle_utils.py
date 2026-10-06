@@ -200,13 +200,21 @@ def _get_drive_path(session, params, image):
     extra_params = image_params["blk_extra_params"]
     serial = re.search(r"(serial|wwn)=(\w+)", extra_params, re.M).group(2)
     if os_type == "windows":
-        cmd = "wmic diskdrive where SerialNumber='%s' get Index,Name"
-        disks = session.cmd_output(cmd % serial)
-        info = disks.splitlines()
-        if len(info) > 1:
-            attr = info[1].split()
-            _online_disk_windows(session, attr[0])
-            return attr[1]
+        cmd = (
+            'powershell -command "Get-CimInstance Win32_DiskDrive'
+            " -Filter 'SerialNumber=''%s'''"
+            ' | Format-List Index,Name"' % serial
+        )
+        disks = session.cmd_output(cmd)
+        props = {}
+        for line in disks.splitlines():
+            line = line.strip()
+            if " : " in line:
+                k, v = line.split(" : ", 1)
+                props[k.strip()] = v.strip()
+        if "Index" in props and "Name" in props:
+            _online_disk_windows(session, props["Index"])
+            return props["Name"]
 
     return get_linux_drive_path(session, serial)
 

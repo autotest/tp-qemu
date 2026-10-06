@@ -70,9 +70,11 @@ def run(test, params, env):
     cmd = "echo %computername%"
     server_name = server_session.cmd_output(cmd).strip()
     client_name = session.cmd_output(cmd).strip()
-    cmd = "wmic computersystem get domain"
+    cmd = (
+        'powershell -command "Get-CimInstance Win32_ComputerSystem'
+        ' | Select-Object -ExpandProperty Domain"'
+    )
     server_workgroup = server_session.cmd_output(cmd).strip()
-    server_workgroup = server_workgroup.splitlines()[-1]
     regkey = r"HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
     cmd = "reg query %s /v Domain" % regkey
     o = server_session.cmd_output(cmd).strip().splitlines()[-1]
@@ -95,7 +97,7 @@ def run(test, params, env):
     client_name = "autotest_%s" % utils_misc.generate_random_string(4)
     test.log.info("Renaming client machine to '%s'", client_name)
     cmd = (
-        'wmic computersystem where name="%%computername%%" rename name="%s"'
+        "powershell -command \"Rename-Computer -NewName '%s' -Force\""
         % client_name
     )
     session.cmd(cmd, timeout=600)
@@ -103,8 +105,8 @@ def run(test, params, env):
     # Join the server's workgroup
     test.log.info("Joining workgroup '%s'", server_workgroup)
     cmd = (
-        'wmic computersystem where name="%%computername%%" call '
-        'joindomainorworkgroup name="%s"' % server_workgroup
+        "powershell -command \"Add-Computer -WorkGroupName '%s' -Force\""
+        % server_workgroup
     )
     session.cmd(cmd, timeout=600)
 

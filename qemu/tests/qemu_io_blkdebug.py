@@ -82,7 +82,6 @@ def run(test, params, env):
             session.close()
             if pre_snapshot:
                 image_io.snapshot_create()
-                image_sn = image_io.snapshot_tag
             session = qemu_io.QemuIOShellSession(
                 test,
                 params,
@@ -105,6 +104,7 @@ def run(test, params, env):
         # Remove the snapshot and base image after a round of test
         image_io.remove()
         if pre_snapshot and not del_snapshot:
+            image_sn = image_io.snapshot_tag
             params_sn = params.object_params(image_sn)
             image_snapshot = QemuImg(params_sn, data_dir.get_data_dir(), image_sn)
             image_snapshot.remove()

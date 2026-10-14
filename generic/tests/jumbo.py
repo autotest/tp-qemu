@@ -102,9 +102,6 @@ def run(test, params, env):
                 session, "netconnectionid", connection_id, "index"
             )
             if os_variant == "winxp":
-                pnpdevice_id = utils_net.get_windows_nic_attribute(
-                    session, "netconnectionid", connection_id, "pnpdeviceid"
-                )
                 cd_num = utils_misc.get_winutils_vol(session)
                 copy_cmd = r"xcopy %s:\devcon\wxp_x86\devcon.exe c:\ " % cd_num
                 session.cmd(copy_cmd)
@@ -118,6 +115,9 @@ def run(test, params, env):
         if os_type == "windows":
             mode = "netsh"
             if os_variant == "winxp":
+                pnpdevice_id = utils_net.get_windows_nic_attribute(
+                    session, "netconnectionid", connection_id, "pnpdeviceid"
+                )
                 connection_id = pnpdevice_id.split("&")[-1]
                 mode = "devcon"
             utils_net.restart_windows_guest_network(

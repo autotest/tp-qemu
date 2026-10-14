@@ -179,8 +179,11 @@ def run(test, params, env):
                     ).split(".")[0]
                     check_shrink_completion(mpoint, shr_size)
                 else:
+                    # All Linux variants in block_resize.cfg enable format_disk.
                     utils_disk.resize_filesystem_linux(
-                        session, partition, str(block_size)
+                        session,
+                        partition,  # pylint: disable=possibly-used-before-assignment
+                        str(block_size),
                     )
                     utils_disk.resize_partition_linux(
                         session, partition, str(block_size)
@@ -246,7 +249,11 @@ def run(test, params, env):
             if os_type == "linux":
                 # After guest reboot, reget the disk letter, if it changed, replace
                 # variables, i.e 'mpoint', 'partition', 'disk' and 'md5_filename'
-                new_disk = utils_misc.get_linux_drive_path(session, disk_serial)
+                # All Linux variants in block_resize.cfg enable format_disk.
+                new_disk = utils_misc.get_linux_drive_path(
+                    session,
+                    disk_serial,  # pylint: disable=possibly-used-before-assignment
+                )
                 new_disk = re.search(r"([svh]d\w+)", new_disk, re.M).group(0)
                 if new_disk != disk:
                     mpoint = mpoint.replace(disk, new_disk)

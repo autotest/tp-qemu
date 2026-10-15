@@ -1765,6 +1765,8 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                 session, mac_addr, os_type, ip_version="ipv6", linklocal=True
             )
             ip_lists = ret_list[if_index]["ip-addresses"]
+            ip_addr_qga_ipv4 = None
+            ip_addr_qga_ipv6 = None
             for ip in ip_lists:
                 if ip["ip-address-type"] == "ipv4":
                     ip_addr_qga_ipv4 = ip["ip-address"]
@@ -1775,10 +1777,7 @@ class QemuGuestAgentBasicCheck(QemuGuestAgentTest):
                         "The ip address type is %s, but it should be"
                         " ipv4 or ipv6." % ip["ip-address-type"]
                     )
-            if (
-                guest_ip_ipv4 != ip_addr_qga_ipv4  # pylint: disable=E0606
-                or guest_ip_ipv6 != ip_addr_qga_ipv6
-            ):  # pylint: disable=E0601
+            if guest_ip_ipv4 != ip_addr_qga_ipv4 or guest_ip_ipv6 != ip_addr_qga_ipv6:
                 test.fail(
                     "Get the wrong ip address for %s interface:\n"
                     "ipv4 address from qga is %s, the expected is %s;\n"

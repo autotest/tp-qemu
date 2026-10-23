@@ -42,6 +42,10 @@ expect {
         send \"n\r\"
         exp_continue
     }
+    -re \"save the list.*y/n\" {
+        send \"n\r\"
+        exp_continue
+    }
     eof { exit 0 }
     timeout { puts \"Error: Pattern not found\"; exit 1 }
 }

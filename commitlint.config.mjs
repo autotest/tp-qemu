@@ -30,7 +30,6 @@ export default {
     "subject-case": [0, "always", "lower-case"],
     "subject-empty": [0, "never"],
     "subject-full-stop": [2, "never", "."],
-    "signed-off-by": [2, "always", "Signed-off-by:"],
     /*
     * Enable type if we need, warn it currently.
     */

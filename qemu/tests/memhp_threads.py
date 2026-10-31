@@ -25,7 +25,7 @@ def run(test, params, env):
     :param env: Dictionary with test environment.
     """
 
-    def get_qemu_threads(cmd, timeout=60):
+    def get_qemu_threads(cmd, expected_threads, timeout=60):
         """
         Get qemu threads when it's stable
         """
@@ -38,7 +38,10 @@ def run(test, params, env):
                 threads = cur_threads
                 time.sleep(1)
             else:
-                return threads
+                if expected_threads is None or expected_threads == threads:
+                    return threads
+                else:
+                    test.log.info("Get qemu threads number stable but not expected")
         test.error("Can't get stable qemu threads number in %ss." % timeout)
 
     vm = env.get_vm(params["main_vm"])
@@ -69,7 +72,8 @@ def run(test, params, env):
         else:
             threads_num = threads_default  # pylint: disable=E0606
         test.log.info("Get qemu threads number again")
-        post_threads = get_qemu_threads(get_threads_cmd)
+        post_threads = get_qemu_threads(get_threads_cmd,
+            expected_threads=pre_threads+threads_num)
         if post_threads - pre_threads != threads_num:
             test.fail(
                 "QEMU threads number is not right, pre is %s, post is %s"

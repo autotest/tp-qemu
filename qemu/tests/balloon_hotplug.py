@@ -126,7 +126,26 @@ def run(test, params, env):
         )
         if out[1] is False:
             test.fail("Failed to unplug balloon in iteration %s, %s" % (i, out[0]))
+
+        # Wait for device cleanup and refresh device container state
+        # Heavy memory deflation can cause slow device release
         time.sleep(2)
+        vm.devices.set_dirty()
+
+        # Poll up to 30s for device to be fully removed
+        remaining_balloons = vm.devices.get_by_params({"driver": "virtio-balloon-pci"})
+        wait_time = 2
+        while remaining_balloons and wait_time < 30:
+            time.sleep(2)
+            wait_time += 2
+            vm.devices.set_dirty()
+            remaining_balloons = vm.devices.get_by_params(
+                {"driver": "virtio-balloon-pci"}
+            )
+
+        if remaining_balloons:
+            test.fail("Device cleanup failed - balloon device still present after %ds" %
+                wait_time)
 
         if params.get("migrate_after_unplug", "no") == "yes":
             error_context.context(

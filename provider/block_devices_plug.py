@@ -64,8 +64,10 @@ def _verify_plugged_num(action):
                     step=1.5,
                 ):
                     disks_info_win = (
-                        "wmic logicaldisk get drivetype,name,description "
-                        "& wmic diskdrive list brief /format:list"
+                        'powershell -command "Get-CimInstance Win32_LogicalDisk'
+                        " | Format-List DriveType,Name,Description;"
+                        " Get-CimInstance Win32_DiskDrive"
+                        ' | Format-List Caption,DeviceID,Size"'
                     )
                     disks_info_linux = "lsblk -a"
                     _session = self.vm.wait_for_login(timeout=360)
@@ -222,7 +224,12 @@ class BlockDevicesPlug(object):
         if self._islinux:
             self._all_disks = utils_misc.list_linux_guest_disks(session)
         else:
-            self._all_disks = set(session.cmd("wmic diskdrive get index").split()[1:])
+            self._all_disks = set(
+                session.cmd(
+                    'powershell -command "Get-CimInstance Win32_DiskDrive'
+                    ' | Select-Object -ExpandProperty Index"'
+                ).split()
+            )
         session.close()
         return self._all_disks
 

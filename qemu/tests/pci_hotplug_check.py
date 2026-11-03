@@ -40,7 +40,7 @@ def run(test, params, env):
 
     def find_new_device(check_cmd, device_string, chk_timeout=30):
         end_time = time.time() + chk_timeout
-        idx = ("wmic" in check_cmd and [0] or [-1])[0]
+        idx = 0 if ("wmic" in check_cmd or "powershell" in check_cmd.lower()) else -1
         time.sleep(2)
         while time.time() < end_time:
             new_line = session.cmd_output(check_cmd)
@@ -53,7 +53,7 @@ def run(test, params, env):
 
     def find_del_device(check_cmd, device_string, chk_timeout=30):
         end_time = time.time() + chk_timeout
-        idx = ("wmic" in check_cmd and [0] or [-1])[0]
+        idx = 0 if ("wmic" in check_cmd or "powershell" in check_cmd.lower()) else -1
         time.sleep(2)
         while time.time() < end_time:
             new_line = session.cmd_output(check_cmd)

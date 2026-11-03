@@ -30,12 +30,14 @@ def run(test, params, env):
     """
 
     def _get_window_disk_index_by_serail(serial):
-        cmd = "wmic diskdrive where SerialNumber='%s' get Index,Name"
-        disks = session.cmd_output(cmd % serial)
-        info = disks.splitlines()
-        if len(info) > 1:
-            attr = info[1].split()
-            return attr[0]
+        cmd = (
+            'powershell -command "Get-CimInstance Win32_DiskDrive'
+            " -Filter 'SerialNumber=''%s'''"
+            ' | Select-Object -ExpandProperty Index"' % serial
+        )
+        out = session.cmd_output(cmd).strip()
+        if out:
+            return out.splitlines()[0].strip()
         test.fail("Not find expected disk ")
 
     def _get_free_size():

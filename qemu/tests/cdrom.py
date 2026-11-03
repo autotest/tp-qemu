@@ -92,7 +92,10 @@ def run(test, params, env):
         :return: list of cdroms;
         :rtype: list
         """
-        list_cdrom_cmd = "wmic cdrom get Drive"
+        list_cdrom_cmd = (
+            'powershell -command "Get-CimInstance Win32_CDROMDrive'
+            ' | Select-Object -ExpandProperty Drive"'
+        )
         filter_cdrom_re = r"\w:"
         if params["os_type"] != "windows":
             list_cdrom_cmd = "ls /dev/cdrom*"
@@ -108,8 +111,11 @@ def run(test, params, env):
         """
         mount_point = "/mnt"
         if params["os_type"] == "windows":
-            cmd = "wmic volume where DriveLetter='%s' " % drive_letter
-            cmd += "get DeviceID | more +1"
+            cmd = (
+                'powershell -command "Get-CimInstance Win32_Volume'
+                " -Filter 'DriveLetter=''%s'''"
+                ' | Select-Object -ExpandProperty DeviceID"' % drive_letter
+            )
             mount_point = session.cmd_output(cmd).strip()
         return mount_point
 
@@ -436,7 +442,11 @@ def run(test, params, env):
         get_pid_cmd = "echo $!"
         if params["os_type"] == "windows":
             copy_file_cmd = "start cmd /c copy /y %s %s" % (src_path, dst_path)
-            get_pid_cmd = "wmic process where name='cmd.exe' get ProcessID"
+            get_pid_cmd = (
+                'powershell -command "Get-CimInstance Win32_Process'
+                " -Filter 'Name=''cmd.exe'''"
+                ' | Select-Object -ExpandProperty ProcessId"'
+            )
         session.cmd(copy_file_cmd, timeout=copy_timeout)
         pid = re.findall(r"\d+", session.cmd_output(get_pid_cmd))[-1]
         return pid

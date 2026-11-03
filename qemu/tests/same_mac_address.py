@@ -35,7 +35,12 @@ def run(test, params, env):
     time.sleep(60)
     error_context.context("Check the ip of guest", test.log.info)
     mac = vm.virtnet[0].mac
-    cmd = 'wmic nicconfig where macaddress="%s" get ipaddress' % mac
+    cmd = (
+        'powershell -command "Get-CimInstance'
+        " Win32_NetworkAdapterConfiguration"
+        " -Filter 'MACAddress=''%s'''"
+        ' | Select-Object -ExpandProperty IPAddress"' % mac
+    )
     status, output = session.cmd_status_output(cmd, timeout)
     if status:
         test.error("Check ip error, output=%s" % output)
@@ -43,9 +48,11 @@ def run(test, params, env):
     test.log.info(lines)
 
     valid_count = 0
-    for l in lines[1:]:
-        ip = re.findall(r'(\d+.\d+.\d+.\d+)"', l)[0]
-        if not ip.startswith("169.254"):
+    for l in lines:
+        match = re.findall(r"(\d+\.\d+\.\d+\.\d+)", l)
+        if not match:
+            continue
+        if not match[0].startswith("169.254"):
             valid_count += 1
     if valid_count != 1:
         test.error("%d valid ip found, should be 1" % valid_count)

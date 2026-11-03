@@ -85,9 +85,17 @@ def run(test, params, env):
     disk_init_cmd = params.get("disk_init_cmd", "")
     disk_driver_install = params.get("disk_driver_install", "")
 
-    vm_ma_cmd = "wmic computersystem set AutomaticManagedPagefile=False"
-    vm_cmd = 'wmic pagefileset where name="C:\\\\pagefile.sys" set '
-    vm_cmd += "InitialSize=%s,MaximumSize=%s" % (vm_size, vm_size)
+    vm_ma_cmd = (
+        'powershell -command "Get-CimInstance Win32_ComputerSystem'
+        " | Set-CimInstance -Property"
+        ' @{AutomaticManagedPagefile=$false}"'
+    )
+    vm_cmd = (
+        'powershell -command "Get-CimInstance Win32_PageFileSetting'
+        " -Filter 'Name=''C:\\\\pagefile.sys'''"
+        " | Set-CimInstance -Property"
+        " @{InitialSize=%s; MaximumSize=%s}\"" % (vm_size, vm_size)
+    )
     vm_ma_cmd = ""
     vm_cmd = ""
     if symbol_files:
@@ -95,7 +103,7 @@ def run(test, params, env):
         symbol_cmd += "git clone %s C:\\\\symbol_files C:\\\\symbols" % symbol_files
     else:
         symbol_cmd = ""
-    wmic_prepare_cmd = "echo exit > cmd && cmd /s wmic"
+    wmic_prepare_cmd = ""
 
     error_context.context("Configure guest system", test.log.info)
     cmd_list = [

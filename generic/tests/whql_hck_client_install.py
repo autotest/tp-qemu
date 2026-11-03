@@ -35,7 +35,10 @@ def run_whql_hck_client_install(test, params, env):
     client_name = session.cmd_output("echo %computername%").strip()
     install_timeout = float(params.get("install_timeout", 1800))
 
-    services_installed = session.cmd_output("wmic service get")
+    services_installed = session.cmd_output(
+        'powershell -command "Get-CimInstance Win32_Service'
+        ' | Select-Object -ExpandProperty Name"'
+    )
     if "HCKcommunication" in services_installed:
         LOG_JOB.info("HCK client already installed.")
         return

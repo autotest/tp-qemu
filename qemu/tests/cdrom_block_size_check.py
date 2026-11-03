@@ -42,7 +42,10 @@ def run(test, params, env):
         :return: list of cdroms;
         :rtype: list
         """
-        list_cdrom_cmd = "wmic cdrom get Drive"
+        list_cdrom_cmd = (
+            'powershell -command "Get-CimInstance Win32_CDROMDrive'
+            ' | Select-Object -ExpandProperty Drive"'
+        )
         filter_cdrom_re = r"\w:"
         if params["os_type"] != "windows":
             list_cdrom_cmd = "ls /dev/cdrom*"
@@ -56,8 +59,11 @@ def run(test, params, env):
         """
         mount_point = "/mnt"
         if os_type == "windows":
-            cmd = "wmic volume where DriveLetter='%s' " % drive_letter
-            cmd += "get DeviceID | more +1"
+            cmd = (
+                'powershell -command "Get-CimInstance Win32_Volume'
+                " -Filter 'DriveLetter=''%s'''"
+                ' | Select-Object -ExpandProperty DeviceID"' % drive_letter
+            )
             mount_point = session.cmd_output(cmd).strip()
         return mount_point
 

@@ -31,7 +31,12 @@ def run(test, params, env):
         """List all disks inside guest."""
         if is_linux:
             return utils_misc.list_linux_guest_disks(session)
-        return set(session.cmd("wmic diskdrive get index").split()[1:])
+        return set(
+            session.cmd(
+                'powershell -command "Get-CimInstance Win32_DiskDrive'
+                ' | Select-Object -ExpandProperty Index"'
+            ).split()
+        )
 
     def _get_scsi_host_id(session):
         test.log.info("Get the scsi host id which is hot plugged.")
